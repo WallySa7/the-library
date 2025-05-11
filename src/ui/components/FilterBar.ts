@@ -257,8 +257,22 @@ export class FilterBar {
 			type: "text",
 			cls: "library-multi-select-search",
 			placeholder: "اختر...",
-			attr: { readonly: "true" },
 		});
+
+		searchInput.addEventListener(
+			"input",
+			this.debounce(() => {
+				const searchTerm = searchInput.value.toLowerCase();
+				this.filterOptions(optionsContainer, searchTerm);
+
+				// Keep the dropdown open while typing
+				if (this.activeDropdown !== type) {
+					this.closeAllDropdowns();
+					this.activeDropdown = type;
+					optionsContainer.style.display = "block";
+				}
+			}, 100)
+		);
 
 		// Options container (dropdown)
 		const optionsContainer = selectContainer.createEl("div", {

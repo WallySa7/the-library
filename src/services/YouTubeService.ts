@@ -7,7 +7,11 @@ import {
 	PlaylistDetails,
 	APIResponse,
 } from "../core/serviceTypes";
-import { parseYouTubeDuration, secondsToHMS } from "../utils/durationUtils";
+import {
+	parseYouTubeDuration,
+	secondsToHMS,
+	parseDurationText,
+} from "../utils/durationUtils";
 
 /**
  * Service for interacting with YouTube API
@@ -161,7 +165,7 @@ export class YouTubeService {
 				}
 
 				// Try to estimate duration
-				const durationResponse = await this.estimatePlaylistDuration(
+				const durationResponse = await this.getPlaylistDuration(
 					playlistId
 				);
 				if (durationResponse.success && durationResponse.data) {
@@ -261,105 +265,180 @@ export class YouTubeService {
 	}
 
 	/**
-	 * Estimates the total duration of a playlist
+	 * Retrieves the total duration of a playlist
 	 * @param playlistId - YouTube playlist ID
-	 * @returns Response containing duration string or error
+	 * @returns Response containing playlist duration or error
 	 */
-	async estimatePlaylistDuration(
+	async getPlaylistDuration(
 		playlistId: string
 	): Promise<APIResponse<string>> {
 		try {
 			if (!playlistId) {
-				return { success: false, error: "معرف قائمة التشغيل غير صالح" };
+				return { success: false, error: "Invalid playlist ID" };
 			}
 
-			// Check cache
+			// Try cache first
 			const cacheKey = `playlistDuration:${playlistId}`;
 			const cached = this.getFromCache<string>(cacheKey);
 			if (cached) {
 				return { success: true, data: cached };
 			}
 
-			// Without API key we can't estimate
-			if (!this.apiKey) {
-				return {
-					success: false,
-					error: "مفتاح API مطلوب لهذه العملية",
-				};
+			// Try external services to get duration
+			let duration: string | null = null;
+
+			// Try createthat.ai service
+			try {
+				duration = await this.getDurationFromCreatethat(playlistId);
+				if (duration) {
+					this.saveToCache(cacheKey, duration);
+					return { success: true, data: duration };
+				}
+			} catch (error) {
+				console.warn(
+					"Failed to get duration from createthat.ai:",
+					error
+				);
 			}
 
+			// Try lenostube service as fallback
+			try {
+				duration = await this.getDurationFromLenostube(playlistId);
+				if (duration) {
+					this.saveToCache(cacheKey, duration);
+					return { success: true, data: duration };
+				}
+			} catch (error) {
+				console.warn(
+					"Failed to get duration from lenostube.com:",
+					error
+				);
+			}
+
+			return {
+				success: false,
+				error: "Could not retrieve playlist duration",
+			};
+		} catch (error) {
+			console.error("Error fetching playlist duration:", error);
+			return {
+				success: false,
+				error: "Failed to fetch playlist duration",
+			};
+		}
+	}
+
+	/**
+	 * Gets playlist duration from createthat.ai service
+	 * @param playlistId - YouTube playlist ID
+	 * @returns Formatted duration string or null
+	 */
+	private async getDurationFromCreatethat(
+		playlistId: string
+	): Promise<string | null> {
+		const response = await request({
+			url: `https://www.createthat.ai/api/youtube-playlist-length?playlistId=${playlistId}`,
+			method: "GET",
+		});
+
+		try {
+			const data = JSON.parse(response);
+
+			if (data.totalDuration) {
+				const hours = data.totalDuration.hours
+					.toString()
+					.padStart(2, "0");
+				const minutes = data.totalDuration.minutes
+					.toString()
+					.padStart(2, "0");
+				const seconds = data.totalDuration.seconds
+					.toString()
+					.padStart(2, "0");
+
+				return `${hours}:${minutes}:${seconds}`;
+			}
+		} catch (error) {
+			console.warn("Failed to parse createthat.ai response:", error);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Gets playlist duration from lenostube.com service
+	 * @param playlistId - YouTube playlist ID
+	 * @returns Formatted duration string or null
+	 */
+	private async getDurationFromLenostube(
+		playlistId: string
+	): Promise<string | null> {
+		const response = await request({
+			url: `https://www.lenostube.com/en/youtube-playlist-length-calculator/?playlist_id=${playlistId}`,
+			method: "GET",
+		});
+
+		try {
+			return this.parseLenostubeResponse(response);
+		} catch (error) {
+			console.warn("Failed to parse lenostube.com response:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Parses HTML response from lenostube.com to extract duration
+	 * @param html - HTML response
+	 * @returns Formatted duration string or null
+	 */
+	private parseLenostubeResponse(html: string): string | null {
+		const totalDurationMatch = html.match(
+			/Total Duration: <strong>(.*?)<\/strong>/
+		);
+		if (totalDurationMatch && totalDurationMatch[1]) {
+			// Convert to HH:MM:SS format
+			const durationParts = totalDurationMatch[1].split(":");
+			if (durationParts.length === 3) {
+				return durationParts
+					.map((part) => part.padStart(2, "0"))
+					.join(":");
+			}
+		}
+
+		// If the direct approach fails, use table parsing
+		try {
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, "text/html");
+
+			const table = doc.querySelector("#playlist-table");
+			if (!table) {
+				return null;
+			}
+
+			const rows = table.querySelectorAll("tbody tr");
 			let totalSeconds = 0;
-			let estimatedDuration = "00:00:00";
 
-			// Get first 50 videos to estimate (limit API usage)
-			const videosResponse = await this.getPlaylistVideos(playlistId, 50);
-			if (!videosResponse.success || !videosResponse.data) {
-				return {
-					success: false,
-					error: "فشل في تقدير مدة قائمة التشغيل",
-				};
-			}
+			for (const row of Array.from(rows)) {
+				const durationCell = row.querySelector("td:nth-child(3)");
+				if (!durationCell) continue;
 
-			const videos = videosResponse.data;
+				const durationText = durationCell.textContent?.trim();
+				if (!durationText) continue;
 
-			// If we have videos, get duration of each
-			if (videos.length > 0) {
-				// Get details for first 5 videos to estimate average duration
-				const videoIds = videos
-					.slice(0, 5)
-					.map((v) => v.videoId)
-					.join(",");
-
-				if (videoIds) {
-					const apiUrl =
-						`https://www.googleapis.com/youtube/v3/videos?` +
-						`id=${videoIds}&key=${this.apiKey}&` +
-						`part=contentDetails`;
-
-					const response = await this.makeApiRequest(apiUrl);
-
-					if (response.ok) {
-						const data = await response.json();
-						if (data.items?.length > 0) {
-							// Calculate average duration
-							let totalDuration = 0;
-							data.items.forEach((item: any) => {
-								const duration = item.contentDetails.duration;
-								const seconds =
-									this.isoDurationToSeconds(duration);
-								totalDuration += seconds;
-							});
-
-							const avgDuration =
-								totalDuration / data.items.length;
-
-							// Estimate total duration based on playlist item count
-							const playlistResponse =
-								await this.getPlaylistDetails(playlistId);
-							if (
-								playlistResponse.success &&
-								playlistResponse.data
-							) {
-								const itemCount =
-									playlistResponse.data.itemCount;
-								totalSeconds = avgDuration * itemCount;
-								estimatedDuration = secondsToHMS(totalSeconds);
-							}
-						}
-					}
+				try {
+					const seconds = parseDurationText(durationText);
+					totalSeconds += seconds;
+				} catch (e) {
+					console.warn(
+						`Could not parse duration: ${durationText}`,
+						e
+					);
 				}
 			}
 
-			// If we have a valid duration, cache it
-			if (estimatedDuration !== "00:00:00") {
-				this.saveToCache(cacheKey, estimatedDuration);
-				return { success: true, data: estimatedDuration };
-			}
-
-			return { success: false, error: "لا يمكن تقدير المدة" };
+			return secondsToHMS(totalSeconds);
 		} catch (error) {
-			console.error("Error estimating playlist duration:", error);
-			return { success: false, error: "فشل في تقدير مدة قائمة التشغيل" };
+			console.warn("Failed to parse lenostube table", error);
+			return null;
 		}
 	}
 
