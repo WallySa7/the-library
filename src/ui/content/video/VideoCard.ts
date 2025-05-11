@@ -2,12 +2,12 @@
  * Component for displaying videos in a card format
  */
 import { Menu, setIcon, moment } from "obsidian";
-import { ContentComponentProps } from "../../../core/types/uiTypes";
+import { ContentComponentProps } from "../../../core/uiTypes";
 import {
 	LibraryItem,
 	VideoItem,
 	PlaylistItem,
-} from "../../../core/types/contentTypes";
+} from "../../../core/contentTypes";
 import { ASSETS } from "../../../core/constants";
 import { ItemUtils } from "../../../utils/itemUtils";
 
@@ -425,20 +425,22 @@ export class VideoCard {
 	private showStatusSubmenu(item: LibraryItem, element: HTMLElement): void {
 		const statusMenu = new Menu();
 
-		this.props.settings.progressTracking.statusOptions.forEach((status) => {
-			statusMenu.addItem((si) => {
-				si.setTitle(status)
-					.setChecked(item.status === status)
-					.onClick(async () => {
-						await this.props.plugin.dataService.updateStatus(
-							item.filePath,
-							status
-						);
-						item.status = status;
-						this.props.onRefresh();
-					});
-			});
-		});
+		this.props.settings.progressTracking.statusOptions.forEach(
+			(status: string) => {
+				statusMenu.addItem((si) => {
+					si.setTitle(status)
+						.setChecked(item.status === status)
+						.onClick(async () => {
+							await this.props.plugin.dataService.updateStatus(
+								item.filePath,
+								status
+							);
+							item.status = status;
+							this.props.onRefresh();
+						});
+				});
+			}
+		);
 
 		const rect = element.getBoundingClientRect();
 		statusMenu.showAtPosition({ x: rect.left, y: rect.bottom });

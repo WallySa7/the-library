@@ -1,12 +1,12 @@
 /**
  * Component for displaying video statistics
  */
-import { ContentComponentProps } from "../../../core/types/uiTypes";
+import { ContentComponentProps } from "../../../core/uiTypes";
 import {
 	LibraryItem,
 	VideoItem,
 	PlaylistItem,
-} from "../../../core/types/contentTypes";
+} from "../../../core/contentTypes";
 import { formatDuration } from "../../../utils/durationUtils";
 
 /**

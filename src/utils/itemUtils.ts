@@ -2,8 +2,8 @@
  * Utility functions for working with content items
  */
 import { App, TFile, Menu, Notice } from "obsidian";
-import { LibraryItem } from "../core/types/contentTypes";
-import { ContentType } from "../core/types/uiTypes";
+import { LibraryItem } from "../core/contentTypes";
+import { ContentType } from "../core/uiTypes";
 
 /**
  * Utilities for working with content items
@@ -370,7 +370,7 @@ export class ItemUtils {
 
 		// Show suggestions
 		if (allTags.length > 0) {
-			allTags.forEach((tag) => {
+			allTags.forEach((tag: string) => {
 				if (!selectedTags.includes(tag)) {
 					const chip = suggestionsContainer.createEl("div", {
 						cls: "library-suggestion-chip",
@@ -599,7 +599,7 @@ export class ItemUtils {
 
 		// Show suggestions
 		if (allCategories.length > 0) {
-			allCategories.forEach((category) => {
+			allCategories.forEach((category: string) => {
 				if (!selectedCategories.includes(category)) {
 					const chip = suggestionsContainer.createEl("div", {
 						cls: "library-suggestion-chip",

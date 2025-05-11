@@ -1,7 +1,7 @@
 /**
  * Template placeholder documentation
  */
-import { PlaceholderDoc } from "../types/uiTypes";
+import { PlaceholderDoc } from "../uiTypes";
 
 /**
  * Placeholder documentation for video templates

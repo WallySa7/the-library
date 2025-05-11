@@ -2,10 +2,7 @@
  * State manager for content filtering
  * Handles filter criteria and notifies subscribers when changes occur
  */
-import {
-	FilterState as FilterStateType,
-	FilterOptions,
-} from "../types/filterTypes";
+import { FilterState as FilterStateType, FilterOptions } from "../filterTypes";
 import { EventEmitter } from "./EventEmitter";
 
 /**

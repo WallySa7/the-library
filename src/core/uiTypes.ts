@@ -2,10 +2,10 @@
  * Types for UI components
  */
 import { App, WorkspaceLeaf } from "obsidian";
-import { LibrarySettings } from "../settings";
-import { FilterState } from "../state/FilterState";
-import { SelectionState } from "../state/SelectionState";
-import { CONTENT_TYPE } from "../constants";
+import { LibrarySettings } from "./settings";
+import { FilterState } from "./state/FilterState";
+import { SelectionState } from "./state/SelectionState";
+import { CONTENT_TYPE } from "./constants";
 
 /**
  * Type for content type string literals

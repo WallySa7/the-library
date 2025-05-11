@@ -1,0 +1,760 @@
+/**
+ * Component for bulk operations on selected items
+ */
+import { Menu, Notice, setIcon } from "obsidian";
+import { ContentComponentProps } from "../../core/uiTypes";
+import { SelectionState } from "../../core/state/SelectionState";
+import { CONTENT_TYPE } from "../../core/constants";
+
+/**
+ * Props for BulkActions component
+ */
+interface BulkActionsProps extends ContentComponentProps {
+	/** Selection state to operate on */
+	selectionState: SelectionState;
+
+	/** Callback when operations complete */
+	onOperationComplete: () => Promise<void>;
+}
+
+/**
+ * Provides UI for performing operations on multiple selected items
+ */
+export class BulkActions {
+	private props: BulkActionsProps;
+	private container: HTMLElement | null = null;
+
+	/**
+	 * Creates a new BulkActions component
+	 * @param props Component props
+	 */
+	constructor(props: BulkActionsProps) {
+		this.props = props;
+	}
+
+	/**
+	 * Renders the bulk actions bar
+	 * @param container Container element to render into
+	 */
+	public render(container: HTMLElement): void {
+		this.container = container;
+
+		// Create bulk actions bar
+		const bulkActionsBar = container.createEl("div", {
+			cls: "library-bulk-actions-bar",
+		});
+
+		// Selection count label
+		const bulkActionsLabel = bulkActionsBar.createEl("span", {
+			cls: "library-bulk-actions-label",
+			text: "إجراءات متعددة: ",
+		});
+
+		const selectionCount = this.props.selectionState.getSelectionCount();
+		bulkActionsLabel.createEl("span", {
+			cls: "library-bulk-selection-count",
+			text: `(${selectionCount})`,
+		});
+
+		// Add action buttons based on content type
+		if (this.props.contentType === CONTENT_TYPE.VIDEO) {
+			this.addVideoActionButtons(bulkActionsBar);
+		}
+
+		// Cancel button (always present)
+		const bulkCancelButton = bulkActionsBar.createEl("button", {
+			cls: "library-bulk-action-btn library-cancel-btn",
+			text: "إلغاء",
+		});
+
+		bulkCancelButton.addEventListener("click", () => {
+			this.props.selectionState.clearSelection();
+		});
+	}
+
+	/**
+	 * Adds video-specific bulk action buttons
+	 * @param container Actions bar container
+	 */
+	private addVideoActionButtons(container: HTMLElement): void {
+		// Status button
+		const bulkStatusButton = container.createEl("button", {
+			cls: "library-bulk-action-btn",
+			text: "تعديل الحالة",
+		});
+
+		bulkStatusButton.addEventListener("click", () => {
+			this.showBulkStatusMenu(bulkStatusButton);
+		});
+
+		// Tags button
+		const bulkTagButton = container.createEl("button", {
+			cls: "library-bulk-action-btn",
+			text: "إضافة وسم",
+		});
+
+		bulkTagButton.addEventListener("click", () => {
+			this.showBulkTagDialog();
+		});
+
+		// Categories button
+		const bulkCategoryButton = container.createEl("button", {
+			cls: "library-bulk-action-btn",
+			text: "تعديل التصنيفات",
+		});
+
+		bulkCategoryButton.addEventListener("click", () => {
+			this.showBulkCategoryDialog();
+		});
+
+		// Delete button
+		const bulkDeleteButton = container.createEl("button", {
+			cls: "library-bulk-action-btn library-delete-btn",
+			text: "حذف",
+		});
+
+		bulkDeleteButton.addEventListener("click", () => {
+			this.confirmBulkDelete();
+		});
+	}
+
+	/**
+	 * Shows the bulk status dropdown menu
+	 * @param buttonEl Button element to position menu against
+	 */
+	private showBulkStatusMenu(buttonEl: HTMLElement): void {
+		const menu = new Menu();
+
+		// Add status options from settings
+		this.props.settings.progressTracking.statusOptions.forEach(
+			(status: string) => {
+				menu.addItem((item) => {
+					item.setTitle(status).onClick(() => {
+						this.performBulkStatusUpdate(status);
+					});
+				});
+			}
+		);
+
+		const rect = buttonEl.getBoundingClientRect();
+		menu.showAtPosition({ x: rect.left, y: rect.bottom });
+	}
+
+	/**
+	 * Performs a bulk status update
+	 * @param status New status to apply
+	 */
+	private async performBulkStatusUpdate(status: string): Promise<void> {
+		const selectedItems = this.props.selectionState.getSelectedItems();
+		if (selectedItems.length === 0) return;
+
+		// Show progress notification
+		new Notice(`⏳ جاري تحديث ${selectedItems.length} عنصر...`);
+
+		try {
+			const result = await this.props.plugin.dataService.bulkUpdateStatus(
+				selectedItems,
+				status
+			);
+
+			if (result.success > 0) {
+				new Notice(
+					`✅ تم تحديث ${result.success} عنصر إلى "${status}"`
+				);
+			}
+
+			if (result.failed > 0) {
+				new Notice(`⚠️ فشل تحديث ${result.failed} عنصر`);
+			}
+
+			// Clean up and refresh
+			this.props.selectionState.clearSelection();
+			await this.props.onOperationComplete();
+		} catch (error) {
+			console.error("Error in bulk status update:", error);
+			new Notice("❌ حدث خطأ أثناء تحديث الحالة");
+		}
+	}
+
+	/**
+	 * Shows dialog for adding tags to multiple items
+	 */
+	private async showBulkTagDialog(): Promise<void> {
+		const selectedItems = this.props.selectionState.getSelectedItems();
+		if (selectedItems.length === 0) return;
+
+		// Create a modern styled dialog
+		const dialog = document.createElement("div");
+		dialog.className = "library-modal-dialog library-bulk-tag-dialog";
+
+		// Add header
+		const header = dialog.createEl("div", { cls: "library-dialog-header" });
+		header.createEl("h3", {
+			text: "إضافة وسم",
+			cls: "library-dialog-title",
+		});
+
+		// Add close button
+		const closeBtn = header.createEl("button", {
+			cls: "library-dialog-close",
+			text: "×",
+		});
+
+		closeBtn.addEventListener("click", () => {
+			document.body.removeChild(dialog);
+		});
+
+		// Create content area
+		const content = dialog.createEl("div", {
+			cls: "library-dialog-content",
+		});
+
+		// Selection count
+		content.createEl("div", {
+			text: `العناصر المحددة: ${selectedItems.length}`,
+			cls: "library-dialog-selection-count",
+		});
+
+		// Tag input
+		const inputContainer = content.createEl("div", {
+			cls: "library-input-container",
+		});
+
+		const tagInput = inputContainer.createEl("input", {
+			type: "text",
+			placeholder: "أدخل اسم الوسم",
+			cls: "library-tag-input",
+		});
+
+		// Help text
+		content.createEl("p", {
+			cls: "library-dialog-description",
+			text: "يمكنك إنشاء وسوم متسلسلة باستخدام الشرطة المائلة. مثال: تقنية/برمجة",
+		});
+
+		// Suggestions section
+		const suggestionsSection = content.createEl("div");
+		suggestionsSection.createEl("h4", { text: "الوسوم المتاحة:" });
+
+		const suggestionsContainer = suggestionsSection.createEl("div", {
+			cls: "library-tag-suggestions",
+		});
+
+		// Get available tags
+		const allTags = await this.props.plugin.dataService.getTags(
+			this.props.contentType
+		);
+		if (allTags.length > 0) {
+			allTags.slice(0, 15).forEach((tag: string) => {
+				const tagChip = suggestionsContainer.createEl("div", {
+					text: tag,
+					cls: "library-tag-suggestion-chip",
+				});
+
+				tagChip.addEventListener("click", () => {
+					tagInput.value = tag;
+				});
+			});
+		} else {
+			suggestionsContainer.createEl("div", {
+				text: "لا توجد وسوم",
+				cls: "library-no-suggestions",
+			});
+		}
+
+		// Add footer with buttons
+		const footer = dialog.createEl("div", { cls: "library-dialog-footer" });
+
+		const submitButton = footer.createEl("button", {
+			text: "إضافة",
+			cls: "library-submit-button",
+		});
+
+		const cancelButton = footer.createEl("button", {
+			text: "إلغاء",
+			cls: "library-cancel-button",
+		});
+
+		// Button actions
+		submitButton.addEventListener("click", async () => {
+			const tag = tagInput.value.trim();
+			if (tag) {
+				await this.performBulkTagAdd(tag);
+				document.body.removeChild(dialog);
+			} else {
+				new Notice("الرجاء إدخال وسم");
+			}
+		});
+
+		cancelButton.addEventListener("click", () => {
+			document.body.removeChild(dialog);
+		});
+
+		// Handle Enter key
+		tagInput.addEventListener("keydown", async (e) => {
+			if (e.key === "Enter") {
+				const tag = tagInput.value.trim();
+				if (tag) {
+					await this.performBulkTagAdd(tag);
+					document.body.removeChild(dialog);
+				}
+			} else if (e.key === "Escape") {
+				document.body.removeChild(dialog);
+			}
+		});
+
+		// Add dialog to DOM and focus input
+		document.body.appendChild(dialog);
+		tagInput.focus();
+	}
+
+	/**
+	 * Performs bulk tag addition
+	 * @param tag Tag to add to selected items
+	 */
+	private async performBulkTagAdd(tag: string): Promise<void> {
+		const selectedItems = this.props.selectionState.getSelectedItems();
+		if (selectedItems.length === 0) return;
+
+		// Show progress notification
+		new Notice(
+			`⏳ جاري إضافة الوسم "${tag}" إلى ${selectedItems.length} عنصر...`
+		);
+
+		try {
+			const result = await this.props.plugin.dataService.bulkAddTag(
+				selectedItems,
+				tag
+			);
+
+			if (result.success > 0) {
+				new Notice(
+					`✅ تم إضافة الوسم "${tag}" إلى ${result.success} عنصر`
+				);
+			}
+
+			if (result.failed > 0) {
+				new Notice(`⚠️ فشل إضافة الوسم إلى ${result.failed} عنصر`);
+			}
+
+			// Clean up and refresh
+			this.props.selectionState.clearSelection();
+			await this.props.onOperationComplete();
+		} catch (error) {
+			console.error("Error adding tag:", error);
+			new Notice("❌ حدث خطأ أثناء إضافة الوسم");
+		}
+	}
+
+	/**
+	 * Shows dialog for adding/replacing categories on multiple items
+	 */
+	private async showBulkCategoryDialog(): Promise<void> {
+		const selectedItems = this.props.selectionState.getSelectedItems();
+		if (selectedItems.length === 0) return;
+
+		// Create dialog
+		const dialog = document.createElement("div");
+		dialog.className =
+			"library-modal-dialog library-edit-categories-dialog";
+
+		// Add header
+		const header = dialog.createEl("div", { cls: "library-dialog-header" });
+		header.createEl("h3", {
+			text: "تعديل التصنيفات بشكل جماعي",
+			cls: "library-dialog-title",
+		});
+
+		// Add close button
+		const closeBtn = header.createEl("button", {
+			cls: "library-dialog-close",
+			text: "×",
+		});
+
+		closeBtn.addEventListener("click", () => {
+			document.body.removeChild(dialog);
+		});
+
+		// Create content area
+		const content = dialog.createEl("div", {
+			cls: "library-dialog-content",
+		});
+
+		// Display count of selected items
+		content.createEl("div", {
+			text: `العناصر المحددة: ${selectedItems.length}`,
+			cls: "library-dialog-item-count",
+		});
+
+		// Array to track selected categories
+		const selectedCategories: string[] = [];
+
+		// Selected categories section
+		const currentSection = content.createEl("div", {
+			cls: "library-dialog-section",
+		});
+
+		currentSection.createEl("h4", {
+			text: "التصنيفات المحددة:",
+			cls: "library-dialog-section-title",
+		});
+
+		// Container for selected categories
+		const selectedCategoriesContainer = currentSection.createEl("div", {
+			cls: "library-selected-categories",
+		});
+
+		// Function to render selected categories
+		const renderSelectedCategories = () => {
+			selectedCategoriesContainer.empty();
+
+			if (selectedCategories.length === 0) {
+				selectedCategoriesContainer.createEl("div", {
+					text: "لا توجد تصنيفات محددة",
+					cls: "library-no-categories",
+				});
+				return;
+			}
+
+			selectedCategories.forEach((category) => {
+				const chip = selectedCategoriesContainer.createEl("div", {
+					cls: "library-category-chip",
+				});
+
+				chip.createEl("span", { text: category });
+
+				const removeBtn = chip.createEl("span", {
+					text: "×",
+					cls: "library-category-remove",
+				});
+
+				removeBtn.addEventListener("click", () => {
+					const index = selectedCategories.indexOf(category);
+					if (index > -1) {
+						selectedCategories.splice(index, 1);
+						renderSelectedCategories();
+					}
+				});
+			});
+		};
+
+		// Initial render
+		renderSelectedCategories();
+
+		// Add new category section
+		const newSection = content.createEl("div", {
+			cls: "library-dialog-section",
+		});
+
+		newSection.createEl("h4", {
+			text: "إضافة تصنيف جديد:",
+			cls: "library-dialog-section-title",
+		});
+
+		// Input for new category
+		const inputGroup = newSection.createEl("div", {
+			cls: "library-input-group",
+		});
+
+		const input = inputGroup.createEl("input", {
+			type: "text",
+			placeholder: "أدخل اسم التصنيف",
+			cls: "library-category-input",
+		});
+
+		const addButton = inputGroup.createEl("button", {
+			text: "إضافة",
+			cls: "library-add-button",
+		});
+
+		// Add category when button is clicked
+		addButton.addEventListener("click", () => {
+			const category = input.value.trim();
+			if (category && !selectedCategories.includes(category)) {
+				selectedCategories.push(category);
+				renderSelectedCategories();
+				input.value = "";
+				input.focus();
+			}
+		});
+
+		// Add category on Enter key
+		input.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				const category = input.value.trim();
+				if (category && !selectedCategories.includes(category)) {
+					selectedCategories.push(category);
+					renderSelectedCategories();
+					input.value = "";
+				}
+			}
+		});
+
+		// Suggestions section
+		const suggestionsSection = content.createEl("div", {
+			cls: "library-dialog-section",
+		});
+
+		suggestionsSection.createEl("h4", {
+			text: "اقتراحات التصنيفات:",
+			cls: "library-dialog-section-title",
+		});
+
+		const suggestionsContainer = suggestionsSection.createEl("div", {
+			cls: "library-category-suggestions",
+		});
+
+		// Get category suggestions
+		let allCategories: string[] = [];
+		if (this.props.contentType === CONTENT_TYPE.VIDEO) {
+			allCategories = await this.props.plugin.dataService.getCategories(
+				this.props.contentType
+			);
+		}
+
+		// Show suggestions
+		if (allCategories.length > 0) {
+			allCategories.forEach((category) => {
+				if (!selectedCategories.includes(category)) {
+					const chip = suggestionsContainer.createEl("div", {
+						cls: "library-suggestion-chip",
+						text: category,
+					});
+
+					chip.addEventListener("click", () => {
+						if (!selectedCategories.includes(category)) {
+							selectedCategories.push(category);
+							renderSelectedCategories();
+						}
+					});
+				}
+			});
+		} else {
+			suggestionsContainer.createEl("div", {
+				text: "لا توجد اقتراحات",
+				cls: "library-no-suggestions",
+			});
+		}
+
+		// Operation mode section
+		const operationModeSection = content.createEl("div", {
+			cls: "library-dialog-section",
+		});
+
+		operationModeSection.createEl("h4", {
+			text: "طريقة التطبيق:",
+			cls: "library-dialog-section-title",
+		});
+
+		const operationModeContainer = operationModeSection.createEl("div", {
+			cls: "library-operation-mode-container",
+		});
+
+		// Radio buttons for operation mode
+		const replaceRadio = operationModeContainer.createEl("label", {
+			cls: "library-radio-label",
+		});
+
+		const replaceInput = replaceRadio.createEl("input", {
+			type: "radio",
+			attr: { name: "operation-mode" },
+			value: "replace",
+		});
+
+		replaceInput.checked = true;
+		replaceRadio.createEl("span", { text: "استبدال التصنيفات الحالية" });
+
+		const appendRadio = operationModeContainer.createEl("label", {
+			cls: "library-radio-label",
+		});
+
+		const appendInput = appendRadio.createEl("input", {
+			type: "radio",
+			attr: { name: "operation-mode" },
+			value: "append",
+		});
+
+		appendRadio.createEl("span", { text: "إضافة إلى التصنيفات الحالية" });
+
+		// Footer with buttons
+		const footer = dialog.createEl("div", { cls: "library-dialog-footer" });
+
+		const cancelButton = footer.createEl("button", {
+			text: "إلغاء",
+			cls: "library-cancel-button",
+		});
+
+		const saveButton = footer.createEl("button", {
+			text: "تطبيق",
+			cls: "library-save-button",
+		});
+
+		// Cancel action
+		cancelButton.addEventListener("click", () => {
+			document.body.removeChild(dialog);
+		});
+
+		// Apply action
+		saveButton.addEventListener("click", async () => {
+			if (selectedCategories.length === 0) {
+				new Notice("الرجاء اختيار تصنيف واحد على الأقل");
+				return;
+			}
+
+			// Determine operation mode
+			const mode = replaceInput.checked ? "replace" : "append";
+
+			// Perform the bulk operation
+			await this.performBulkCategoryUpdate(selectedCategories, mode);
+
+			document.body.removeChild(dialog);
+		});
+
+		// Add dialog to document body
+		document.body.appendChild(dialog);
+
+		// Focus the input
+		input.focus();
+	}
+
+	/**
+	 * Performs bulk category update
+	 * @param categories Categories to update
+	 * @param mode Update mode ('replace' or 'append')
+	 */
+	private async performBulkCategoryUpdate(
+		categories: string[],
+		mode: "replace" | "append"
+	): Promise<void> {
+		const selectedItems = this.props.selectionState.getSelectedItems();
+		if (selectedItems.length === 0) return;
+
+		// Show progress notification
+		new Notice(
+			`⏳ جاري تعديل التصنيفات لـ ${selectedItems.length} عنصر...`
+		);
+
+		try {
+			const result =
+				await this.props.plugin.dataService.bulkUpdateCategories(
+					selectedItems,
+					categories,
+					mode
+				);
+
+			if (result.success > 0) {
+				new Notice(`✅ تم تحديث التصنيفات لـ ${result.success} عنصر`);
+			}
+
+			if (result.failed > 0) {
+				new Notice(`⚠️ فشل تحديث التصنيفات لـ ${result.failed} عنصر`);
+			}
+
+			// Clean up and refresh
+			this.props.selectionState.clearSelection();
+			await this.props.onOperationComplete();
+		} catch (error) {
+			console.error("Error updating categories:", error);
+			new Notice("❌ حدث خطأ أثناء تحديث التصنيفات");
+		}
+	}
+
+	/**
+	 * Shows confirmation dialog for bulk delete
+	 */
+	private confirmBulkDelete(): void {
+		const selectedItems = this.props.selectionState.getSelectedItems();
+		if (selectedItems.length === 0) return;
+
+		const count = selectedItems.length;
+		const itemType =
+			this.props.contentType === CONTENT_TYPE.VIDEO
+				? "فيديو/سلسلة"
+				: "عنصر";
+
+		// Create a styled confirm dialog
+		const confirmDialog = document.createElement("div");
+		confirmDialog.className = "library-confirm-dialog";
+
+		const message = confirmDialog.createEl("p", {
+			cls: "library-confirm-message",
+			text: `هل أنت متأكد من حذف ${count} ${itemType}؟ لا يمكن التراجع عن هذا الإجراء.`,
+		});
+
+		const warningIcon = message.createEl("span", {
+			cls: "library-warning-icon",
+		});
+		setIcon(warningIcon, "alert-triangle");
+
+		const buttonContainer = confirmDialog.createEl("div", {
+			cls: "library-confirm-buttons",
+		});
+
+		const confirmButton = buttonContainer.createEl("button", {
+			text: "حذف",
+			cls: "library-confirm-delete",
+		});
+
+		const cancelButton = buttonContainer.createEl("button", {
+			text: "إلغاء",
+			cls: "library-confirm-cancel",
+		});
+
+		// Button actions
+		confirmButton.addEventListener("click", async () => {
+			document.body.removeChild(confirmDialog);
+			await this.performBulkDelete();
+		});
+
+		cancelButton.addEventListener("click", () => {
+			document.body.removeChild(confirmDialog);
+		});
+
+		// Add dialog to document body
+		document.body.appendChild(confirmDialog);
+	}
+
+	/**
+	 * Performs bulk delete operation
+	 */
+	private async performBulkDelete(): Promise<void> {
+		const selectedItems = this.props.selectionState.getSelectedItems();
+		if (selectedItems.length === 0) return;
+
+		const itemType =
+			this.props.contentType === CONTENT_TYPE.VIDEO
+				? "فيديو/سلسلة"
+				: "عنصر";
+
+		// Show progress notification
+		new Notice(`⏳ جاري حذف ${selectedItems.length} ${itemType}...`);
+
+		try {
+			const result = await this.props.plugin.dataService.bulkDelete(
+				selectedItems
+			);
+
+			if (result.success > 0) {
+				new Notice(`✅ تم حذف ${result.success} ${itemType} بنجاح`);
+			}
+
+			if (result.failed > 0) {
+				new Notice(`⚠️ فشل حذف ${result.failed} ${itemType}`);
+			}
+
+			// Clean up and refresh
+			this.props.selectionState.clearSelection();
+			await this.props.onOperationComplete();
+		} catch (error) {
+			console.error("Error performing bulk delete:", error);
+			new Notice("❌ حدث خطأ أثناء حذف العناصر");
+		}
+	}
+
+	/**
+	 * Cleans up component resources
+	 */
+	public destroy(): void {
+		this.container = null;
+	}
+}

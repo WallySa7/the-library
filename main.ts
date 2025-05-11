@@ -1,11 +1,12 @@
 import { Plugin, Notice, TFile } from "obsidian";
-import { VideoModal } from "./ui/modals/VideoModal";
-import { LibrarySettings, DEFAULT_SETTINGS } from "./core/settings";
-import { SettingsTab } from "./ui/settings/SettingsTab";
-import { DataService } from "./services/DataService";
-import { YouTubeService } from "./services/YouTubeService";
-import { LibraryView } from "./ui/views/LibraryView";
-import { VIEW_TYPE_LIBRARY } from "./core/constants";
+import { VideoModal } from "./src/ui/modals/VideoModal";
+import { LibrarySettings, DEFAULT_SETTINGS } from "./src/core/settings";
+// import { SettingsTab } from "./src/ui/settings/SettingsTab";
+import { DataService } from "./src/services/DataService";
+import { YouTubeService } from "./src/services/YouTubeService";
+import { LibraryView } from "./src/ui/views/LibraryView";
+import { VIEW_TYPE_LIBRARY } from "./src/core/constants";
+import { ContentType } from "src/core";
 
 /**
  * Main plugin class for The Library
@@ -70,7 +71,7 @@ export default class LibraryPlugin extends Plugin {
 		);
 
 		// Add settings tab
-		this.addSettingTab(new SettingsTab(this.app, this));
+		// this.addSettingTab(new SettingsTab(this.app, this));
 	}
 
 	/**
@@ -190,7 +191,10 @@ export default class LibraryPlugin extends Plugin {
 	 * @param viewType - The type of view to activate
 	 * @param contentType - Optional content type to display
 	 */
-	async activateView(viewType: string, contentType?: string): Promise<void> {
+	async activateView(
+		viewType: string,
+		contentType?: ContentType
+	): Promise<void> {
 		// Detach existing views of this type first for clean state
 		this.app.workspace.detachLeavesOfType(viewType);
 

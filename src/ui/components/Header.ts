@@ -4,7 +4,7 @@
  */
 import { setIcon, WorkspaceLeaf } from "obsidian";
 import { CONTENT_TYPE, VIEW_MODE } from "../../core/constants";
-import { ContentType, ViewProps } from "../../core/types/uiTypes";
+import { ContentType, ViewProps } from "../../core/uiTypes";
 import { SelectionState } from "../../core/state/SelectionState";
 import { VideoModal } from "../modals/VideoModal";
 import { ExportActions } from "../actions/ExportActions";

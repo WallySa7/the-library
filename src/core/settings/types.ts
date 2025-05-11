@@ -1,7 +1,7 @@
 /**
  * Settings types for The Library plugin
  */
-import { TableColumnConfig } from "../types/uiTypes";
+import { TableColumnConfig } from "../uiTypes";
 
 /**
  * Progress tracking settings

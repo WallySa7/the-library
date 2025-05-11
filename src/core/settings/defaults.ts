@@ -7,7 +7,7 @@ import {
 	FolderRulesSettings,
 	TemplateSettings,
 } from "./types";
-import { TableColumnConfig } from "../types/uiTypes";
+import { TableColumnConfig } from "../uiTypes";
 
 /**
  * Default table columns for videos

@@ -2,7 +2,7 @@
  * Filter bar component for content filtering
  */
 import { SearchComponent, setIcon } from "obsidian";
-import { ContentComponentProps } from "../../core/types/uiTypes";
+import { ContentComponentProps } from "../../core/uiTypes";
 import { FilterState, FilterStateEvents } from "../../core/state/FilterState";
 
 /**
@@ -709,10 +709,10 @@ export class FilterBar {
 		});
 
 		// Status filters
-		filterState.statuses.forEach((status) => {
+		filterState.statuses.forEach((status: string) => {
 			this.createFilterBadge(filtersList, "الحالة", status, () => {
 				const updatedStatuses = filterState.statuses.filter(
-					(s) => s !== status
+					(s: string) => s !== status
 				);
 				this.props.filterState.updateState({
 					statuses: updatedStatuses,
@@ -723,10 +723,10 @@ export class FilterBar {
 		});
 
 		// Presenter filters
-		filterState.presenters.forEach((presenter) => {
+		filterState.presenters.forEach((presenter: string) => {
 			this.createFilterBadge(filtersList, "المقدم", presenter, () => {
 				const updatedPresenters = filterState.presenters.filter(
-					(p) => p !== presenter
+					(p: string) => p !== presenter
 				);
 				this.props.filterState.updateState({
 					presenters: updatedPresenters,
@@ -737,10 +737,10 @@ export class FilterBar {
 		});
 
 		// Type filters
-		filterState.types.forEach((type) => {
+		filterState.types.forEach((type: string) => {
 			this.createFilterBadge(filtersList, "النوع", type, () => {
 				const updatedTypes = filterState.types.filter(
-					(t) => t !== type
+					(t: string) => t !== type
 				);
 				this.props.filterState.updateState({
 					types: updatedTypes,
@@ -751,10 +751,10 @@ export class FilterBar {
 		});
 
 		// Category filters
-		filterState.categories.forEach((category) => {
+		filterState.categories.forEach((category: string) => {
 			this.createCategoryFilterBadge(filtersList, category, () => {
 				const updatedCategories = filterState.categories.filter(
-					(c) => c !== category
+					(c: string) => c !== category
 				);
 				this.props.filterState.updateState({
 					categories: updatedCategories,
@@ -765,9 +765,11 @@ export class FilterBar {
 		});
 
 		// Tag filters
-		filterState.tags.forEach((tag) => {
+		filterState.tags.forEach((tag: string) => {
 			this.createTagFilterBadge(filtersList, tag, () => {
-				const updatedTags = filterState.tags.filter((t) => t !== tag);
+				const updatedTags = filterState.tags.filter(
+					(t: string) => t !== tag
+				);
 				this.props.filterState.updateState({
 					tags: updatedTags,
 					page: 1,

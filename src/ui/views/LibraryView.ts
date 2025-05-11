@@ -18,8 +18,8 @@ import { FilterBar } from "../components/FilterBar";
 import { Pagination } from "../components/Pagination";
 import { BulkActions } from "../components/BulkActions";
 import { ContentRenderer } from "../content/ContentRenderer";
-import { ContentType } from "../../core/types/uiTypes";
-import { LibraryItem } from "../../core/types/contentTypes";
+import { ContentType } from "../../core/uiTypes";
+import { LibraryItem } from "../../core/contentTypes";
 
 /**
  * Main view for displaying library content
@@ -361,7 +361,9 @@ export class LibraryView extends ItemView {
 			settings: this.plugin.settings,
 			contentType: this.contentType,
 			selectionState: this.selectionState,
+			filterState: this.filterState,
 			onOperationComplete: this.handleBulkOperationComplete.bind(this),
+			onRefresh: this.refresh.bind(this),
 		});
 
 		this.bulkActionsComponent.render(this.bulkActionsContainer);
@@ -401,7 +403,9 @@ export class LibraryView extends ItemView {
 			settings: this.plugin.settings,
 			contentType: this.contentType,
 			filterState: this.filterState,
+			selectionState: this.selectionState,
 			onFilterChange: this.handleFilterChange.bind(this),
+			onRefresh: this.refresh.bind(this),
 			presenters: this.presenters,
 			categories: this.categories,
 			tags: this.tags,
@@ -473,6 +477,7 @@ export class LibraryView extends ItemView {
 			totalItems: totalItems,
 			filterState: this.filterState,
 			onPageChange: this.handlePageChange.bind(this),
+			onRefresh: this.refresh.bind(this),
 		});
 
 		this.paginationComponent.render(this.paginationContainer);

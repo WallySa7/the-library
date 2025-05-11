@@ -2,14 +2,14 @@
  * Content renderer for library items
  * Renders content based on type and view mode
  */
-import { ContentComponentProps } from "../../core/types/uiTypes";
-import { LibraryItem } from "../../core/types/contentTypes";
+import { ContentComponentProps } from "../../core/uiTypes";
+import { LibraryItem } from "../../core/contentTypes";
 import { CONTENT_TYPE, VIEW_MODE } from "../../core/constants";
 import { FilterStateEvents } from "../../core/state/FilterState";
 import { SelectionStateEvents } from "../../core/state/SelectionState";
-import { VideoStats } from "./video/VideoStats";
 import { VideoTable } from "./video/VideoTable";
 import { VideoCard } from "./video/VideoCard";
+import { VideoStats } from "./video/VIdeoStats";
 
 /**
  * Props for ContentRenderer
