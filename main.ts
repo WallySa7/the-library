@@ -1,41 +1,58 @@
-// main.ts - Refactored
 import { Plugin, Notice, TFile } from "obsidian";
-import { AlRawiModal } from "./src/videoModal";
-import { AlRawiSettings, DEFAULT_SETTINGS } from "./src/settings";
-import { AlRawiSettingsTab } from "./src/settingsTab";
-import { DataService } from "./src/dataService";
-import { YouTubeService } from "./src/youtubeService";
-import { UnifiedView } from "./src/UnifiedView";
-import { VIEW_TYPE_ALRAWI_UNIFIED } from "./src/constants";
+import { VideoModal } from "./ui/modals/VideoModal";
+import { LibrarySettings, DEFAULT_SETTINGS } from "./core/settings";
+import { SettingsTab } from "./ui/settings/SettingsTab";
+import { DataService } from "./services/DataService";
+import { YouTubeService } from "./services/YouTubeService";
+import { LibraryView } from "./ui/views/LibraryView";
+import { VIEW_TYPE_LIBRARY } from "./core/constants";
 
 /**
- * Main plugin class for Al-Rawi
- * Handles plugin initialization, command registration, and view management
+ * Main plugin class for The Library
+ * Manages plugin lifecycle and core functionality
  */
-export default class AlRawiPlugin extends Plugin {
-	settings: AlRawiSettings;
+export default class LibraryPlugin extends Plugin {
+	// Plugin settings
+	settings: LibrarySettings;
+
+	// Core services
 	dataService: DataService;
 	youtubeService: YouTubeService;
 
+	/**
+	 * Plugin initialization on load
+	 */
 	async onload() {
-		console.log("Loading Al-Rawi plugin");
+		console.log("Loading The Library plugin");
 
+		// Load settings first as other components depend on them
 		await this.loadSettings();
+
+		// Initialize core services
 		this.initializeServices();
+
+		// Register plugin components
 		this.registerViews();
 		this.registerCommands();
 		this.registerRibbonIcons();
 		this.registerEvents();
-		this.ensureDirectoriesExist();
-	}
 
-	onunload() {
-		console.log("Unloading Al-Rawi plugin");
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_ALRAWI_UNIFIED);
+		// Ensure required directories exist
+		await this.ensureDirectoriesExist();
 	}
 
 	/**
-	 * Initializes core services used by the plugin
+	 * Clean up when plugin is disabled
+	 */
+	onunload() {
+		console.log("Unloading The Library plugin");
+
+		// Detach any active views
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_LIBRARY);
+	}
+
+	/**
+	 * Initialize core services used throughout the plugin
 	 */
 	private initializeServices(): void {
 		this.dataService = new DataService(this.app, this.settings);
@@ -43,103 +60,81 @@ export default class AlRawiPlugin extends Plugin {
 	}
 
 	/**
-	 * Registers plugin views
+	 * Register plugin views
 	 */
 	private registerViews(): void {
-		// Register unified view for both books and videos
+		// Register main library view
 		this.registerView(
-			VIEW_TYPE_ALRAWI_UNIFIED,
-			(leaf) => new UnifiedView(leaf, this)
+			VIEW_TYPE_LIBRARY,
+			(leaf) => new LibraryView(leaf, this)
 		);
 
 		// Add settings tab
-		this.addSettingTab(new AlRawiSettingsTab(this.app, this));
+		this.addSettingTab(new SettingsTab(this.app, this));
 	}
 
 	/**
-	 * Registers all plugin commands
+	 * Register all plugin commands
 	 */
 	private registerCommands(): void {
-		this.registerViewCommands();
-		this.registerContentCommands();
-	}
-
-	/**
-	 * Registers commands for opening different views
-	 */
-	private registerViewCommands(): void {
-		// View commands
+		// Command to open the main library view
 		this.addCommand({
-			id: "open-alrawi-view",
-			name: "فتح إحصائيات الراوي",
-			callback: () =>
-				this.activateView(VIEW_TYPE_ALRAWI_UNIFIED, "videos"),
+			id: "open-library-view",
+			name: "فتح مكتبتي",
+			callback: () => this.activateView(VIEW_TYPE_LIBRARY),
 		});
-	}
 
-	/**
-	 * Registers commands for content management (adding videos, books, benefits)
-	 */
-	private registerContentCommands(): void {
-		// Add content commands
+		// Command to add new video
 		this.addCommand({
-			id: "add-alrawi-video",
+			id: "add-library-video",
 			name: "إضافة فيديو جديد",
-			callback: () => this.addVideo(),
+			callback: () => this.openVideoModal(),
 		});
 	}
 
 	/**
-	 * Registers ribbon icons for quick access to plugin functions
+	 * Register ribbon icons for quick access
 	 */
 	private registerRibbonIcons(): void {
-		// Add unified view icon
-		this.addRibbonIcon("layout-dashboard", "محتوى الراوي", () => {
-			this.activateView(VIEW_TYPE_ALRAWI_UNIFIED);
+		// Main library icon
+		this.addRibbonIcon("book-open", "مكتبتي", () => {
+			this.activateView(VIEW_TYPE_LIBRARY);
 		});
 	}
 
 	/**
-	 * Registers event handlers
+	 * Register event handlers for file system events
 	 */
 	private registerEvents(): void {
-		// File modification event
+		// File modification event - refresh views when relevant files change
 		this.registerEvent(
 			this.app.vault.on("modify", (file) => {
-				// Refresh view if a markdown file is modified
 				if (file instanceof TFile && file.extension === "md") {
 					this.refreshViews();
 				}
 			})
 		);
 
-		// File deletion event
+		// File deletion event - refresh views when files are deleted
 		this.registerEvent(
 			this.app.vault.on("delete", () => {
-				// Refresh view if a file is deleted
 				this.refreshViews();
 			})
 		);
 	}
 
 	/**
-	 * Ensures required directories exist
+	 * Ensures required directories exist for storing content
 	 */
 	private async ensureDirectoriesExist(): Promise<void> {
-		await this.ensureVideosFolderExists();
-	}
+		const contentFolder = this.settings.defaultFolder;
 
-	/**
-	 * Ensures the videos folder exists
-	 */
-	private async ensureVideosFolderExists(): Promise<void> {
-		const videosFolder = this.settings.defaultFolder;
-		if (!this.app.vault.getAbstractFileByPath(videosFolder)) {
+		if (!this.app.vault.getAbstractFileByPath(contentFolder)) {
 			try {
-				await this.app.vault.createFolder(videosFolder);
-				console.log(`Created videos folder: ${videosFolder}`);
+				await this.app.vault.createFolder(contentFolder);
+				console.log(`Created content folder: ${contentFolder}`);
 			} catch (error) {
-				console.error(`Failed to create videos folder: ${error}`);
+				console.error(`Failed to create content folder: ${error}`);
 			}
 		}
 	}
@@ -153,6 +148,8 @@ export default class AlRawiPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData()
 		);
+
+		// Ensure all settings have default values
 		this.ensureSettingsAreComplete();
 		await this.saveSettings();
 	}
@@ -161,19 +158,16 @@ export default class AlRawiPlugin extends Plugin {
 	 * Ensures all settings have proper default values
 	 */
 	private ensureSettingsAreComplete(): void {
-		// Ensure folder rules are initialized
+		// Fill in any missing folder settings
 		if (!this.settings.folderRules) {
 			this.settings.folderRules = DEFAULT_SETTINGS.folderRules;
 		}
 
-		if (
-			this.settings.folderRules &&
-			this.settings.folderRules.showExamples === undefined
-		) {
+		if (this.settings.folderRules.showExamples === undefined) {
 			this.settings.folderRules.showExamples = true;
 		}
 
-		// Ensure view mode is initialized
+		// Ensure view mode is set
 		if (!this.settings.viewMode) {
 			this.settings.viewMode = DEFAULT_SETTINGS.viewMode;
 		}
@@ -192,33 +186,31 @@ export default class AlRawiPlugin extends Plugin {
 	}
 
 	/**
-	 * Activates a specific view
-	 * @param viewType The type of view to activate
-	 * @param contentType Optional content type to display (videos or books)
+	 * Activates the specified view
+	 * @param viewType - The type of view to activate
+	 * @param contentType - Optional content type to display
 	 */
-	async activateView(
-		viewType: string,
-		contentType?: "videos"
-	): Promise<void> {
-		// Detach existing views of this type first
+	async activateView(viewType: string, contentType?: string): Promise<void> {
+		// Detach existing views of this type first for clean state
 		this.app.workspace.detachLeavesOfType(viewType);
 
 		// Create a new leaf for the view
 		const leaf = this.app.workspace.getLeaf("tab");
 		if (!leaf) return;
 
+		// Set the view state
 		await leaf.setViewState({
 			type: viewType,
 			active: true,
 		});
 
 		// If we need to switch content type
-		if (contentType && viewType === VIEW_TYPE_ALRAWI_UNIFIED) {
-			const view = leaf.view as UnifiedView;
-			if (view && typeof view.toggleContentType === "function") {
+		if (contentType && viewType === VIEW_TYPE_LIBRARY) {
+			const view = leaf.view as LibraryView;
+			if (view && typeof view.setContentType === "function") {
 				// Small delay to ensure view is ready
 				setTimeout(() => {
-					view.toggleContentType(contentType);
+					view.setContentType(contentType);
 				}, 100);
 			}
 		}
@@ -233,22 +225,19 @@ export default class AlRawiPlugin extends Plugin {
 	/**
 	 * Opens the video addition modal
 	 */
-	addVideo(): void {
-		new AlRawiModal(this.app, this.settings).open();
+	openVideoModal(): void {
+		new VideoModal(this.app, this).open();
 	}
 
 	/**
-	 * Refreshes all open views
+	 * Refreshes all open plugin views
 	 */
 	refreshViews(): void {
-		// Find all open AlRawi views and trigger a refresh
-		const leaves = this.app.workspace.getLeavesOfType(
-			VIEW_TYPE_ALRAWI_UNIFIED
-		);
+		// Find all open Library views and trigger a refresh
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_LIBRARY);
 		leaves.forEach((leaf) => {
-			if (leaf.view instanceof UnifiedView) {
-				// Refresh the view
-				leaf.view.renderView();
+			if (leaf.view instanceof LibraryView) {
+				leaf.view.refresh();
 			}
 		});
 	}
