@@ -575,6 +575,136 @@ export class DataService extends BaseDataService {
 	}
 
 	/**
+	 * Gets list of presenters from existing content
+	 * @returns Array of presenter names
+	 */
+	async getPresenterList(): Promise<string[]> {
+		return this.getPresenters();
+	}
+
+	/**
+	 * Performs bulk status update on multiple items
+	 * @param itemPaths - Paths to the items to update
+	 * @param status - New status value
+	 * @returns Result with success and failure counts
+	 */
+	async bulkUpdateStatus(
+		itemPaths: string[],
+		status: string
+	): Promise<BulkOperationResult> {
+		return this.performBulkOperation({
+			type: "status",
+			value: status,
+			itemPaths,
+		});
+	}
+
+	/**
+	 * Adds a tag to multiple items
+	 * @param itemPaths - Paths to the items to update
+	 * @param tag - Tag to add
+	 * @returns Result with success and failure counts
+	 */
+	async bulkAddTag(
+		itemPaths: string[],
+		tag: string
+	): Promise<BulkOperationResult> {
+		return this.performBulkOperation({
+			type: "tag",
+			value: tag,
+			itemPaths,
+		});
+	}
+
+	/**
+	 * Updates categories for multiple items
+	 * @param itemPaths - Paths to the items to update
+	 * @param categories - Categories to set or add
+	 * @param mode - Whether to replace or append categories
+	 * @returns Result with success and failure counts
+	 */
+	async bulkUpdateCategories(
+		itemPaths: string[],
+		categories: string[],
+		mode: "replace" | "append" = "replace"
+	): Promise<BulkOperationResult> {
+		let success = 0;
+		let failed = 0;
+
+		for (const filePath of itemPaths) {
+			try {
+				const file = this.app.vault.getAbstractFileByPath(filePath);
+				if (!(file instanceof TFile)) {
+					failed++;
+					continue;
+				}
+
+				const content = await this.app.vault.read(file);
+				const frontmatter = this.parseFrontmatter(content);
+
+				let updatedCategories: string[];
+				if (mode === "append" && frontmatter?.["التصنيفات"]) {
+					// Get current categories and add new ones without duplicates
+					const currentCategories = this.normalizeTags(
+						frontmatter["التصنيفات"]
+					);
+					updatedCategories = [
+						...new Set([...currentCategories, ...categories]),
+					];
+				} else {
+					// Replace mode - just use the new categories
+					updatedCategories = [...categories];
+				}
+
+				const result = await this.updateCategories(
+					filePath,
+					updatedCategories
+				);
+
+				if (result) {
+					success++;
+				} else {
+					failed++;
+				}
+			} catch (error) {
+				console.error(
+					`Error updating categories for ${filePath}:`,
+					error
+				);
+				failed++;
+			}
+		}
+
+		return { success, failed };
+	}
+
+	/**
+	 * Performs bulk deletion of multiple items
+	 * @param itemPaths - Paths to the items to delete
+	 * @returns Result with success and failure counts
+	 */
+	async bulkDelete(itemPaths: string[]): Promise<BulkOperationResult> {
+		return this.performBulkOperation({
+			type: "delete",
+			itemPaths,
+		});
+	}
+
+	/**
+	 * Delegates to VideoService.importVideoData if available
+	 * @param jsonData - JSON data to import
+	 * @returns Import result
+	 */
+	// async importVideoData(jsonData: string): Promise<ImportResult> {
+	// 	// First try to use VideoService if available
+	// 	if (this.plugin && this.plugin.videoService) {
+	// 		return this.plugin.videoService.importVideoData(jsonData);
+	// 	}
+
+	// 	// Otherwise use existing importVideos function
+	// 	return this.importVideos(jsonData);
+	// }
+	/**
 	 * Imports videos data from JSON
 	 * @param jsonData - JSON string with video data
 	 * @returns Import result with success and failure counts

@@ -1,7 +1,7 @@
 /**
  * Pagination component for navigation through content pages
  */
-import { PAGE_SIZE_OPTIONS } from "../../core/constants";
+import { LOCAL_STORAGE_KEYS, PAGE_SIZE_OPTIONS } from "../../core/constants";
 import { ComponentProps } from "../../core/uiTypes";
 import { FilterState } from "../../core/state/FilterState";
 
@@ -284,6 +284,19 @@ export class Pagination {
 		const newItemsPerPage = parseInt(this.itemsPerPageSelect.value);
 
 		if (newItemsPerPage !== filterState.itemsPerPage) {
+			// Save to localStorage
+			try {
+				localStorage.setItem(
+					LOCAL_STORAGE_KEYS.ITEMS_PER_PAGE,
+					newItemsPerPage.toString()
+				);
+			} catch (e) {
+				console.warn(
+					"Failed to save items per page to localStorage:",
+					e
+				);
+			}
+
 			// When changing items per page, reset to first page
 			this.props.filterState.updateState({
 				itemsPerPage: newItemsPerPage,

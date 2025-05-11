@@ -9,7 +9,7 @@ import { FilterStateEvents } from "../../core/state/FilterState";
 import { SelectionStateEvents } from "../../core/state/SelectionState";
 import { VideoTable } from "./video/VideoTable";
 import { VideoCard } from "./video/VideoCard";
-import { VideoStats } from "./video/VIdeoStats";
+import { VideoStats } from "./video/VideoStats";
 
 /**
  * Props for ContentRenderer
