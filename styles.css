@@ -1,7 +1,3 @@
-/* The Library Plugin - Enhanced Styles
- * Modern, Responsive, and Theme-Compatible CSS for Obsidian Library Plugin
- */
-
 /* Base Styles and Variables */
 .library-container {
 	direction: rtl;
@@ -170,7 +166,8 @@
 	display: flex;
 	flex-direction: column;
 	min-width: 150px;
-	flex: 1;
+	flex: 1 1 auto;
+	max-width: calc(25% - 12px); /* Allow 4 filters per row with gap */
 }
 
 .library-filter-label {
@@ -253,8 +250,10 @@
 }
 
 .library-search-container {
-	flex: 2;
-	min-width: 200px;
+	flex: 1 1 100%;
+	min-width: 100%;
+	order: -1; /* Place search at the top */
+	margin-bottom: 8px;
 }
 
 /* Selected Filters */
