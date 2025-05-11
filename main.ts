@@ -1,7 +1,7 @@
 import { Plugin, Notice, TFile } from "obsidian";
 import { VideoModal } from "./src/ui/modals/VideoModal";
 import { LibrarySettings, DEFAULT_SETTINGS } from "./src/core/settings";
-// import { SettingsTab } from "./src/ui/settings/SettingsTab";
+import { SettingsTab } from "./src/ui/settings/SettingsTab";
 import { DataService } from "./src/services/DataService";
 import { YouTubeService } from "./src/services/YouTubeService";
 import { LibraryView } from "./src/ui/views/LibraryView";
@@ -71,7 +71,7 @@ export default class LibraryPlugin extends Plugin {
 		);
 
 		// Add settings tab
-		// this.addSettingTab(new SettingsTab(this.app, this));
+		this.addSettingTab(new SettingsTab(this.app, this));
 	}
 
 	/**
