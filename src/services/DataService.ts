@@ -695,15 +695,10 @@ export class DataService extends BaseDataService {
 	 * @param jsonData - JSON data to import
 	 * @returns Import result
 	 */
-	// async importVideoData(jsonData: string): Promise<ImportResult> {
-	// 	// First try to use VideoService if available
-	// 	if (this.plugin && this.plugin.videoService) {
-	// 		return this.plugin.videoService.importVideoData(jsonData);
-	// 	}
-
-	// 	// Otherwise use existing importVideos function
-	// 	return this.importVideos(jsonData);
-	// }
+	async importVideoData(jsonData: string): Promise<ImportResult> {
+		// Otherwise use existing importVideos function
+		return this.importVideos(jsonData);
+	}
 	/**
 	 * Imports videos data from JSON
 	 * @param jsonData - JSON string with video data

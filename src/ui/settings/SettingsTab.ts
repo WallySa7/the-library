@@ -29,7 +29,6 @@ export class SettingsTab extends PluginSettingTab {
 		this.addFolderOrgSection(containerEl);
 		this.addProgressTrackingSection(containerEl);
 		this.addTemplateSection(containerEl);
-		this.addAdvancedSection(containerEl);
 	}
 
 	/**
@@ -105,21 +104,6 @@ export class SettingsTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.maxTitleLength = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// Default view mode setting
-		new Setting(containerEl)
-			.setName("طريقة العرض الافتراضية")
-			.setDesc("اختر طريقة العرض الافتراضية للمحتوى")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption("table", "جدول")
-					.addOption("card", "بطاقات")
-					.setValue(this.plugin.settings.viewMode)
-					.onChange(async (value: "table" | "card") => {
-						this.plugin.settings.viewMode = value;
 						await this.plugin.saveSettings();
 					})
 			);
@@ -318,55 +302,6 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-
-		// Status options setting
-		new Setting(containerEl)
-			.setName("خيارات الحالة")
-			.setDesc("حدد خيارات الحالة المتاحة (مفصولة بسطور جديدة)")
-			.addTextArea((textarea) => {
-				const statusOptions =
-					this.plugin.settings.progressTracking.statusOptions;
-				const statusText = statusOptions.join("\n");
-
-				textarea
-					.setValue(statusText)
-					.setPlaceholder("حالة لكل سطر")
-					.onChange(async (value) => {
-						const newOptions = value
-							.split("\n")
-							.map((line) => line.trim())
-							.filter((line) => line.length > 0);
-
-						// Ensure there's at least one option
-						if (newOptions.length === 0) {
-							newOptions.push("لم يشاهد");
-						}
-
-						this.plugin.settings.progressTracking.statusOptions =
-							newOptions;
-
-						// Ensure default status is in the options
-						if (
-							!newOptions.includes(
-								this.plugin.settings.progressTracking
-									.defaultStatus
-							)
-						) {
-							this.plugin.settings.progressTracking.defaultStatus =
-								newOptions[0];
-						}
-
-						await this.plugin.saveSettings();
-						// Reload to update dropdowns
-						this.display();
-					});
-
-				// Adjust textarea height based on content
-				textarea.inputEl.rows = Math.max(4, statusOptions.length);
-				textarea.inputEl.style.minHeight = "100px";
-
-				return textarea;
-			});
 	}
 
 	/**
@@ -376,88 +311,61 @@ export class SettingsTab extends PluginSettingTab {
 	private addTemplateSection(containerEl: HTMLElement): void {
 		containerEl.createEl("h2", { text: "قوالب الملاحظات" });
 
-		// Video template setting
-		this.addTemplateEditor(
+		// Video template setting with editor button
+		this.addTemplateWithEditor(
 			containerEl,
 			"قالب الفيديو",
 			"قالب الملاحظات لفيديوهات يوتيوب",
-			"video",
-			this.plugin.settings.templates.video
+			"video"
 		);
 
-		// Playlist template setting
-		this.addTemplateEditor(
+		// Playlist template setting with editor button
+		this.addTemplateWithEditor(
 			containerEl,
 			"قالب السلسلة",
 			"قالب الملاحظات لسلاسل يوتيوب",
-			"playlist",
-			this.plugin.settings.templates.playlist
+			"playlist"
 		);
 	}
 
 	/**
-	 * Adds a template editor setting
+	 * Adds a template editor setting with a button to open the editor modal
 	 * @param containerEl Container element
 	 * @param name Setting name
 	 * @param desc Setting description
 	 * @param type Template type (video/playlist)
-	 * @param template Template content
 	 */
-	private addTemplateEditor(
+	private addTemplateWithEditor(
 		containerEl: HTMLElement,
 		name: string,
 		desc: string,
-		type: "video" | "playlist",
-		template: string
+		type: "video" | "playlist"
 	): void {
 		const templateSetting = new Setting(containerEl)
 			.setName(name)
 			.setDesc(desc);
 
-		// Full width container for template editor
-		const templateContainer = containerEl.createEl("div", {
-			cls: "library-template-container",
-		});
-
-		// Create editor
-		const templateEditor = templateContainer.createEl("textarea", {
-			cls: "library-template-editor",
-		});
-		templateEditor.value = template;
-		templateEditor.rows = 15;
-		templateEditor.addEventListener("change", async () => {
-			// Update settings
-			this.plugin.settings.templates[type] = templateEditor.value;
-			await this.plugin.saveSettings();
-		});
-
-		// Placeholder documentation
-		const placeholderSection = containerEl.createEl("div", {
-			cls: "library-placeholders",
-		});
-
-		placeholderSection.createEl("h3", {
-			text: `المتغيرات المتاحة في قالب ${
-				type === "video" ? "الفيديو" : "السلسلة"
-			}:`,
-		});
-
-		const table = placeholderSection.createEl("table", {
-			cls: "library-placeholders-table",
-		});
-
-		const thead = table.createEl("thead");
-		const headerRow = thead.createEl("tr");
-		headerRow.createEl("th", { text: "المتغير" });
-		headerRow.createEl("th", { text: "الوصف" });
-
-		const tbody = table.createEl("tbody");
-
-		const placeholders = PLACEHOLDER_DOCS[type] || [];
-		placeholders.forEach((placeholder) => {
-			const row = tbody.createEl("tr");
-			row.createEl("td", { text: placeholder.placeholder });
-			row.createEl("td", { text: placeholder.description });
+		// Add an edit button
+		templateSetting.addButton((button) => {
+			button
+				.setButtonText("فتح محرر القالب")
+				.setCta()
+				.onClick(() => {
+					// Import dynamically to avoid circular dependencies
+					import("../modals/TemplateEditorModal").then(
+						({ TemplateEditorModal }) => {
+							new TemplateEditorModal(
+								this.app,
+								this.plugin.settings,
+								type,
+								async () => {
+									await this.plugin.saveSettings();
+									// Update the preview
+								}
+							).open();
+						}
+					);
+				});
 		});
 	}
 
@@ -465,21 +373,4 @@ export class SettingsTab extends PluginSettingTab {
 	 * Adds advanced settings section
 	 * @param containerEl Container element
 	 */
-	private addAdvancedSection(containerEl: HTMLElement): void {
-		containerEl.createEl("h2", { text: "إعدادات متقدمة" });
-
-		// Table columns configuration button
-		new Setting(containerEl)
-			.setName("تخصيص أعمدة الجدول")
-			.setDesc("تخصيص الأعمدة المعروضة في طريقة عرض الجدول")
-			.addButton((button) =>
-				button.setButtonText("فتح إعدادات الأعمدة").onClick(() => {
-					// This needs implementation in a separate modal
-					// But we'll just show a notice for now
-					new Notice("ستتم إضافة هذه الميزة قريباً");
-				})
-			);
-
-		// Reset settings button
-	}
 }

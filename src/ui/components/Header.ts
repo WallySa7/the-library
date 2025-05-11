@@ -5,7 +5,10 @@
 import { setIcon, WorkspaceLeaf } from "obsidian";
 import { CONTENT_TYPE, VIEW_MODE } from "../../core/constants";
 import { ContentType, ViewProps } from "../../core/uiTypes";
-import { SelectionState } from "../../core/state/SelectionState";
+import {
+	SelectionState,
+	SelectionStateEvents,
+} from "../../core/state/SelectionState";
 import { VideoModal } from "../modals/VideoModal";
 import { ExportActions } from "../actions/ExportActions";
 import { ImportActions } from "../actions/ImportActions";
@@ -64,7 +67,7 @@ export class Header {
 
 		// Set up selection change listener
 		const unsubscribe = props.selectionState.subscribe(
-			"selectionChanged",
+			SelectionStateEvents.SELECTION_CHANGED,
 			this.updateSelectionDependentUI.bind(this)
 		);
 

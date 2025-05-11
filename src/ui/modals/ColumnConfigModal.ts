@@ -301,10 +301,26 @@ export class ColumnConfigModal extends Modal {
 	 * Resets columns to default settings
 	 */
 	resetToDefault(): void {
-		const defaultColumns =
-			this.plugin.settings.tableColumns[this.contentType];
-		// Deep copy default columns
-		this.columns = JSON.parse(JSON.stringify(defaultColumns));
+		const {
+			DEFAULT_VIDEO_COLUMNS,
+		} = require("../../core/settings/defaults");
+
+		// Use the correct default based on content type
+		if (this.contentType === "video") {
+			// Deep copy default columns
+			this.columns = JSON.parse(JSON.stringify(DEFAULT_VIDEO_COLUMNS));
+		} else {
+			// For other content types if needed in the future
+			// Add similar logic here
+
+			// For now, just use current settings as fallback
+			const defaultColumns =
+				this.plugin.settings.tableColumns[this.contentType];
+			this.columns = JSON.parse(JSON.stringify(defaultColumns));
+		}
+
+		// Update the UI to reflect the changes
+		this.redraw();
 	}
 
 	/**

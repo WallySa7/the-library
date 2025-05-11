@@ -128,7 +128,7 @@ export class ImportActions {
 			new Notice("⏳ جاري استيراد بيانات...");
 
 			const result: ImportResult =
-				await this.plugin.dataService.importVideoData(jsonData);
+				await this.plugin.dataService.importVideos(jsonData);
 
 			if (result.success > 0) {
 				new Notice(`✅ تم استيراد ${result.success} من العناصر بنجاح`);
