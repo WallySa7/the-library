@@ -35,6 +35,7 @@
 	color: var(--text-normal);
 	border: 1px solid var(--background-modifier-border);
 	white-space: nowrap;
+	padding: 1em;
 }
 
 .library-button:hover,
@@ -1279,7 +1280,6 @@
 
 /* Settings styles */
 .library-rtl {
-	direction: rtl;
 	text-align: right;
 }
 
@@ -1294,6 +1294,7 @@
 
 .library-settings .setting-item-control {
 	justify-content: flex-end;
+	flex: 0;
 }
 
 .library-template-container {
@@ -1368,6 +1369,7 @@
 	border-radius: 6px;
 	margin-top: 12px;
 	font-size: 0.9em;
+	direction: rtl;
 }
 
 .library-rtl .dropdown {
@@ -1697,6 +1699,7 @@
 
 .library-template-description {
 	margin-bottom: 20px;
+	direction: rtl;
 }
 
 .library-template-warning {
@@ -1773,6 +1776,9 @@
 	resize: vertical;
 	transition: border-color var(--transition-speed) var(--transition-timing),
 		box-shadow var(--transition-speed) var(--transition-timing);
+
+	direction: rtl;
+	text-align-last: right;
 }
 
 .library-content-editor:focus {
@@ -1850,9 +1856,10 @@
 
 .library-template-buttons {
 	display: flex;
-	justify-content: flex-end;
+	justify-content: flex-start;
 	gap: 12px;
 	margin-top: 24px;
+	flex-direction: row-reverse;
 }
 
 /* Additional styles for the settings page preview */
