@@ -273,10 +273,21 @@ export class FilterBar {
 		// Ensure options are unique and valid
 		let validOptions: string[] = [];
 
+		// Add mapping from singular to plural form for filter types
+		const typeMapping: Record<string, string> = {
+			status: "statuses",
+			presenter: "presenters",
+			type: "types",
+			category: "categories",
+			tag: "tags",
+		};
+
 		// Use dynamic options if enabled and available
 		if (this.props.useDynamicFiltering) {
+			// Use the mapped type for looking up options
+			const mappedType = typeMapping[type] || type;
 			const dynamicOptions = this.props.filterState.getAvailableOptions(
-				type as any
+				mappedType as any
 			);
 
 			// Merge with selected values to ensure selected items are always shown
