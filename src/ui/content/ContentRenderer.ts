@@ -74,9 +74,6 @@ export class ContentRenderer {
 	public render(container: HTMLElement): void {
 		this.container = container;
 
-		// Render statistics first
-		this.renderStats(container);
-
 		// Render the main content
 		this.renderContent(container);
 	}

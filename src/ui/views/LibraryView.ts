@@ -20,6 +20,7 @@ import { BulkActions } from "../components/BulkActions";
 import { ContentRenderer } from "../content/ContentRenderer";
 import { ContentType } from "../../core/uiTypes";
 import { LibraryItem } from "../../core/contentTypes";
+import { VideoStats } from "../content/video/VideoStats";
 
 /**
  * Main view for displaying library content
@@ -50,6 +51,7 @@ export class LibraryView extends ItemView {
 
 	// Component references
 	private headerComponent: Header | null = null;
+	private statsContainer: HTMLElement | null = null;
 	private filterBarComponent: FilterBar | null = null;
 	private bulkActionsComponent: BulkActions | null = null;
 	private contentRenderer: ContentRenderer | null = null;
@@ -164,6 +166,11 @@ export class LibraryView extends ItemView {
 		// Header section
 		this.headerContainer = container.createEl("div", {
 			cls: "library-header-container",
+		});
+
+		// Stats section - Add this new container BEFORE the filter section
+		this.statsContainer = container.createEl("div", {
+			cls: "library-stats-section",
 		});
 
 		// Filter section
@@ -286,6 +293,9 @@ export class LibraryView extends ItemView {
 		// Render the header
 		this.renderHeader();
 
+		// Render stats
+		this.renderStats();
+
 		// Render bulk actions bar
 		this.renderBulkActions();
 
@@ -346,6 +356,29 @@ export class LibraryView extends ItemView {
 		});
 
 		this.headerComponent.render(this.headerContainer);
+	}
+
+	/**
+	 * Renders the stats component
+	 */
+	private renderStats(): void {
+		if (!this.statsContainer) return;
+		this.statsContainer.empty();
+
+		if (this.contentType === CONTENT_TYPE.VIDEO) {
+			const statsComponent = new VideoStats({
+				app: this.app,
+				plugin: this.plugin,
+				settings: this.plugin.settings,
+				contentType: this.contentType,
+				items: this.contentItems,
+				filterState: this.filterState,
+				selectionState: this.selectionState,
+				onRefresh: this.refresh.bind(this),
+			});
+
+			statsComponent.render(this.statsContainer);
+		}
 	}
 
 	/**
