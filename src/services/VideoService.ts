@@ -117,7 +117,7 @@ export class VideoService extends BaseDataService {
 					// Process video
 					const duration = fm["المدة"] || "00:00:00";
 					const url = fm["رابط"] || "";
-					const videoId = fm["معرف الفيديو"] || "";
+					const videoId = fm["معرف المقطع"] || "";
 					const thumbnailUrl = fm["الصورة المصغرة"] || "";
 
 					// Parse duration to seconds
@@ -135,7 +135,7 @@ export class VideoService extends BaseDataService {
 						videoId,
 						thumbnailUrl,
 						filePath: file.path,
-						type: contentType || "فيديو", // Default to "فيديو"
+						type: contentType || "مقطع", // Default to "مقطع"
 						status,
 						dateAdded,
 						categories,
@@ -569,7 +569,7 @@ export class VideoService extends BaseDataService {
 							title: item.title,
 							duration: item.duration || "00:00:00",
 							presenter: item.presenter,
-							type: item.type || "فيديو",
+							type: item.type || "مقطع",
 							description: item.description || "",
 							tags: item.tags || [],
 							thumbnailUrl: item.thumbnailUrl || "",

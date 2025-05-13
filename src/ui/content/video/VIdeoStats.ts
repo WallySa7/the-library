@@ -70,7 +70,7 @@ export class VideoStats {
 		// Create individual stat cards
 		this.createStatCard(
 			statsContainer,
-			"عدد الفيديوهات",
+			"عدد المقاطع",
 			stats.videoCount.toString()
 		);
 

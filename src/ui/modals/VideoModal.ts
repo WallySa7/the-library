@@ -127,9 +127,9 @@ export class VideoModal extends BaseModal {
 		this.createFormField(form, "نوع المحتوى", () => {
 			const container = form.createEl("div");
 			this.typeInput = new DropdownComponent(container);
-			this.typeInput.addOption("فيديو", "فيديو");
+			this.typeInput.addOption("مقطع", "مقطع");
 			this.typeInput.addOption("سلسلة", "سلسلة");
-			this.typeInput.setValue("فيديو");
+			this.typeInput.setValue("مقطع");
 			return container;
 		});
 
@@ -302,7 +302,7 @@ export class VideoModal extends BaseModal {
 		}
 
 		this.isLoading = true;
-		this.loadingMessage = "جاري جلب معلومات الفيديو...";
+		this.loadingMessage = "جاري جلب معلومات المقطع...";
 		this.updateLoadingUI();
 
 		try {
@@ -313,7 +313,7 @@ export class VideoModal extends BaseModal {
 				// Treat as a video
 				const videoId = extractVideoId(url);
 				if (!videoId) {
-					this.showError("لم نتمكن من استخراج معرف الفيديو");
+					this.showError("لم نتمكن من استخراج معرف المقطع");
 					return;
 				}
 
@@ -322,13 +322,13 @@ export class VideoModal extends BaseModal {
 
 				if (!response.success) {
 					this.showError(
-						response.error || "فشل في جلب معلومات الفيديو"
+						response.error || "فشل في جلب معلومات المقطع"
 					);
 					return;
 				}
 
 				if (!response.data) {
-					this.showError("فشل في جلب معلومات الفيديو");
+					this.showError("فشل في جلب معلومات المقطع");
 					return;
 				}
 
@@ -376,7 +376,7 @@ export class VideoModal extends BaseModal {
 			}
 		} catch (error) {
 			console.error("Error previewing video:", error);
-			this.showError("حدث خطأ أثناء معاينة الفيديو");
+			this.showError("حدث خطأ أثناء معاينة المقطع");
 		} finally {
 			this.isLoading = false;
 			this.updateLoadingUI();
@@ -495,7 +495,7 @@ export class VideoModal extends BaseModal {
 		try {
 			// If URL contains watch?v=, always treat as video
 			if (url.includes("watch?v=")) {
-				this.loadingMessage = "جاري جلب تفاصيل الفيديو...";
+				this.loadingMessage = "جاري جلب تفاصيل المقطع...";
 				this.updateLoadingUI();
 				await this.handleSingleVideo(url);
 			}
@@ -514,7 +514,7 @@ export class VideoModal extends BaseModal {
 			this.close();
 		} catch (error) {
 			console.error("Error adding video:", error);
-			this.showError("حدث خطأ أثناء إضافة الفيديو");
+			this.showError("حدث خطأ أثناء إضافة المقطع");
 		} finally {
 			this.isLoading = false;
 			this.updateLoadingUI();
@@ -534,19 +534,19 @@ export class VideoModal extends BaseModal {
 
 		try {
 			// Fetch video details from YouTube
-			this.loadingMessage = "جاري جلب تفاصيل الفيديو من يوتيوب...";
+			this.loadingMessage = "جاري جلب تفاصيل المقطع من يوتيوب...";
 			this.updateLoadingUI();
 
 			const response = await this.plugin.youtubeService.getVideoDetails(
 				videoId
 			);
 			if (!response.success) {
-				this.showError(response.error || "فشل في جلب معلومات الفيديو");
+				this.showError(response.error || "فشل في جلب معلومات المقطع");
 				return;
 			}
 
 			if (!response.data) {
-				this.showError("فشل في جلب معلومات الفيديو");
+				this.showError("فشل في جلب معلومات المقطع");
 				return;
 			}
 
@@ -596,13 +596,13 @@ export class VideoModal extends BaseModal {
 			});
 
 			if (success) {
-				this.showSuccess("تمت إضافة الفيديو بنجاح");
+				this.showSuccess("تمت إضافة المقطع بنجاح");
 			} else {
 				this.showError("حدث خطأ أثناء إنشاء الملاحظة");
 			}
 		} catch (error) {
 			console.error("Error creating video note:", error);
-			this.showError("حدث خطأ أثناء إضافة الفيديو");
+			this.showError("حدث خطأ أثناء إضافة المقطع");
 			throw error;
 		}
 	}

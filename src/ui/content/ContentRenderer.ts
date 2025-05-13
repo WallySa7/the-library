@@ -186,6 +186,49 @@ export class ContentRenderer {
 				this.renderContent(this.container);
 			}
 		}
+
+		this.updateFilterOptions();
+	}
+
+	/**
+	 * Updates available filter options based on filtered items
+	 */
+	private updateFilterOptions(): void {
+		// Get unique values from current filtered items
+		const statusSet = new Set<string>();
+		const presenterSet = new Set<string>();
+		const typeSet = new Set<string>();
+		const categorySet = new Set<string>();
+		const tagSet = new Set<string>();
+
+		// Collect options from filtered items
+		this.filteredItems.forEach((item) => {
+			if (item.status) statusSet.add(item.status);
+			if ("presenter" in item && item.presenter)
+				presenterSet.add(item.presenter);
+			typeSet.add(item.type);
+
+			// Collect categories
+			if (item.categories && Array.isArray(item.categories)) {
+				item.categories.forEach((category) =>
+					categorySet.add(category)
+				);
+			}
+
+			// Collect tags
+			if (item.tags && Array.isArray(item.tags)) {
+				item.tags.forEach((tag) => tagSet.add(tag));
+			}
+		});
+
+		// Update filter state with available options
+		this.props.filterState.setAvailableOptions({
+			statuses: Array.from(statusSet),
+			presenters: Array.from(presenterSet),
+			types: Array.from(typeSet),
+			categories: Array.from(categorySet),
+			tags: Array.from(tagSet),
+		});
 	}
 
 	/**

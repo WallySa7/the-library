@@ -114,7 +114,7 @@ export class FilterBar {
 			filterBar,
 			"النوع",
 			"type",
-			["فيديو", "سلسلة"],
+			["مقطع", "سلسلة"],
 			filterState.types
 		);
 
@@ -1060,9 +1060,19 @@ export class FilterBar {
 				selectedValues = filterState.categories;
 			else if (type === "tag") selectedValues = filterState.tags;
 
-			// Get available options
+			// Add mapping from singular to plural form
+			const typeMapping: Record<string, string> = {
+				status: "statuses",
+				presenter: "presenters",
+				type: "types",
+				category: "categories",
+				tag: "tags",
+			};
+
+			// Use the mapped plural form to get options
+			const mappedType = typeMapping[type] || type;
 			const availableOptions = this.props.filterState.getAvailableOptions(
-				type as any
+				mappedType as any
 			);
 
 			// Add selected values to ensure they're always shown

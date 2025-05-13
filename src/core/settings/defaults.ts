@@ -87,7 +87,7 @@ export const DEFAULT_VIDEO_TEMPLATE = `---
 المدة: {{duration}}
 تاريخ الإضافة: {{date}}
 رابط: {{url}}
-معرف الفيديو: {{videoId}}
+معرف المقطع: {{videoId}}
 الوسوم: {{tags}}
 الصورة المصغرة: {{thumbnailUrl}}
 التصنيفات: {{categories}}
@@ -98,7 +98,7 @@ export const DEFAULT_VIDEO_TEMPLATE = `---
 
 {{description}}
 
-## تفاصيل الفيديو
+## تفاصيل المقطع
 - **المدة:** {{duration}}
 - **النوع:** {{type}}
 - **المقدم:** {{presenter}}

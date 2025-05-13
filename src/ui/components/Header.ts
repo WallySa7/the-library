@@ -145,8 +145,8 @@ export class Header {
 			cls: `library-content-toggle ${
 				this.props.contentType === CONTENT_TYPE.VIDEO ? "active" : ""
 			}`,
-			text: "فيديوهات",
-			attr: { title: "عرض الفيديوهات" },
+			text: "مقاطع",
+			attr: { title: "عرض المقاطع" },
 		});
 
 		setIcon(this.videoButton, "play-circle");

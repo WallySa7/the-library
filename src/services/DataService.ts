@@ -125,7 +125,7 @@ export class DataService extends BaseDataService {
 				}
 				// Process as regular video
 				else {
-					const videoId = frontmatter["معرف الفيديو"] || "";
+					const videoId = frontmatter["معرف المقطع"] || "";
 					const duration = frontmatter["المدة"] || "00:00:00";
 					const thumbnailUrl = frontmatter["الصورة المصغرة"] || "";
 
@@ -144,7 +144,7 @@ export class DataService extends BaseDataService {
 						videoId,
 						thumbnailUrl,
 						filePath: file.path,
-						type: fileType || "فيديو", // Default to "video" in Arabic
+						type: fileType || "مقطع", // Default to "video" in Arabic
 						status,
 						dateAdded,
 						categories,
@@ -776,7 +776,7 @@ export class DataService extends BaseDataService {
 								title: item.title,
 								duration: item.duration,
 								presenter: item.presenter,
-								type: item.type || "فيديو",
+								type: item.type || "مقطع",
 								description: item.description || "",
 								tags: item.tags || [],
 								thumbnailUrl: item.thumbnailUrl || "",
@@ -821,7 +821,7 @@ export class DataService extends BaseDataService {
 								title: video.title,
 								duration: video.duration,
 								presenter: video.presenter,
-								type: video.type || "فيديو",
+								type: video.type || "مقطع",
 								description: video.description || "",
 								tags: video.tags || [],
 								thumbnailUrl: video.thumbnailUrl || "",
@@ -838,7 +838,7 @@ export class DataService extends BaseDataService {
 							console.error("Error importing video:", e);
 							failed++;
 							messages.push(
-								`خطأ في استيراد الفيديو: ${e.message}`
+								`خطأ في استيراد المقطع: ${e.message}`
 							);
 						}
 					}

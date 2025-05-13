@@ -273,13 +273,13 @@ export class LibraryView extends ItemView {
 						this.plugin.settings.progressTracking.statusOptions ||
 						[],
 					presenters: this.presenters || [],
-					types: ["فيديو", "سلسلة"],
+					types: ["مقطع", "سلسلة"],
 					categories: this.categories || [],
 					tags: this.tags || [],
 				});
 			} catch (error) {
 				console.error("Error loading video content:", error);
-				new Notice("خطأ في تحميل محتوى الفيديو");
+				new Notice("خطأ في تحميل محتوى المقطع");
 			}
 		}
 	}

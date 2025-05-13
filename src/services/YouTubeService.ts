@@ -46,7 +46,7 @@ export class YouTubeService {
 	async getVideoDetails(videoId: string): Promise<APIResponse<VideoDetails>> {
 		try {
 			if (!videoId) {
-				return { success: false, error: "معرف الفيديو غير صالح" };
+				return { success: false, error: "معرف المقطع غير صالح" };
 			}
 
 			// Check cache first
@@ -75,7 +75,7 @@ export class YouTubeService {
 
 			const data = await response.json();
 			if (!data.items?.length) {
-				return { success: false, error: "لم يتم العثور على الفيديو" };
+				return { success: false, error: "لم يتم العثور على المقطع" };
 			}
 
 			// Extract video details
@@ -93,7 +93,7 @@ export class YouTubeService {
 			return { success: true, data: details };
 		} catch (error) {
 			console.error("Error fetching video details:", error);
-			return { success: false, error: "فشل في جلب تفاصيل الفيديو" };
+			return { success: false, error: "فشل في جلب تفاصيل المقطع" };
 		}
 	}
 
@@ -237,7 +237,7 @@ export class YouTubeService {
 			if (!response.ok) {
 				return {
 					success: false,
-					error: "فشل في جلب فيديوهات قائمة التشغيل",
+					error: "فشل في جلب مقاطع قائمة التشغيل",
 				};
 			}
 
@@ -259,7 +259,7 @@ export class YouTubeService {
 			console.error("Error fetching playlist videos:", error);
 			return {
 				success: false,
-				error: "فشل في جلب فيديوهات قائمة التشغيل",
+				error: "فشل في جلب مقاطع قائمة التشغيل",
 			};
 		}
 	}
@@ -546,12 +546,12 @@ export class YouTubeService {
 			} catch (e) {
 				return {
 					success: false,
-					error: "تعذر الوصول إلى بيانات الفيديو",
+					error: "تعذر الوصول إلى بيانات المقطع",
 				};
 			}
 		} catch (error) {
 			console.error("Error in fallback video details:", error);
-			return { success: false, error: "فشل في جلب تفاصيل الفيديو" };
+			return { success: false, error: "فشل في جلب تفاصيل المقطع" };
 		}
 	}
 

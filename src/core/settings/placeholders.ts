@@ -7,17 +7,17 @@ import { PlaceholderDoc } from "../uiTypes";
  * Placeholder documentation for video templates
  */
 export const VIDEO_PLACEHOLDERS: PlaceholderDoc[] = [
-	{ placeholder: "{{type}}", description: "نوع المحتوى (فيديو/سلسلة)" },
+	{ placeholder: "{{type}}", description: "نوع المحتوى (مقطع/سلسلة)" },
 	{ placeholder: "{{presenter}}", description: "اسم المقدم" },
-	{ placeholder: "{{duration}}", description: "مدة الفيديو (HH:MM:SS)" },
+	{ placeholder: "{{duration}}", description: "مدة المقطع (HH:MM:SS)" },
 	{ placeholder: "{{date}}", description: "تاريخ الإضافة" },
 	{ placeholder: "{{url}}", description: "رابط يوتيوب" },
-	{ placeholder: "{{videoId}}", description: "معرف الفيديو" },
+	{ placeholder: "{{videoId}}", description: "معرف المقطع" },
 	{ placeholder: "{{tags}}", description: "قائمة الوسوم" },
 	{ placeholder: "{{thumbnailUrl}}", description: "رابط الصورة المصغرة" },
-	{ placeholder: "{{title}}", description: "عنوان الفيديو" },
-	{ placeholder: "{{description}}", description: "وصف الفيديو" },
-	{ placeholder: "{{categories}}", description: "تصنيفات الفيديو" },
+	{ placeholder: "{{title}}", description: "عنوان المقطع" },
+	{ placeholder: "{{description}}", description: "وصف المقطع" },
+	{ placeholder: "{{categories}}", description: "تصنيفات المقطع" },
 	{ placeholder: "{{status}}", description: "حالة المشاهدة" },
 ];
 
@@ -43,7 +43,7 @@ export const PLAYLIST_PLACEHOLDERS: PlaceholderDoc[] = [
  * Placeholder documentation for folder structure
  */
 export const FOLDER_PLACEHOLDERS: PlaceholderDoc[] = [
-	{ placeholder: "{{type}}", description: "نوع المحتوى (فيديو/سلسلة)" },
+	{ placeholder: "{{type}}", description: "نوع المحتوى (مقطع/سلسلة)" },
 	{ placeholder: "{{presenter}}", description: "اسم المقدم" },
 	{ placeholder: "{{date}}", description: "تاريخ الإضافة (YYYY-MM-DD)" },
 	{ placeholder: "{{year}}", description: "السنة فقط" },
@@ -67,11 +67,11 @@ export const PLACEHOLDER_DOCS: Record<string, PlaceholderDoc[]> = {
  */
 export function getFolderExample(structure: string): string {
 	const examples: Record<string, string> = {
-		"{{type}}/{{presenter}}": "فيديو/أحمد الشقيري",
+		"{{type}}/{{presenter}}": "مقطع/أحمد الشقيري",
 		"{{presenter}}/{{type}}": "أحمد الشقيري/سلسلة",
 		"{{type}}/{{year}}": "سلسلة/2023",
 		"{{presenter}}/{{year}}-{{month}}": "أحمد الشقيري/2023-07",
-		"{{type}}/{{presenter}}/{{date}}": "فيديو/أحمد الشقيري/2023-07-15",
+		"{{type}}/{{presenter}}/{{date}}": "مقطع/أحمد الشقيري/2023-07-15",
 	};
 
 	return examples[structure] || examples["{{type}}/{{presenter}}"];

@@ -851,7 +851,7 @@ export class BulkActions {
 		const count = selectedItems.length;
 		const itemType =
 			this.props.contentType === CONTENT_TYPE.VIDEO
-				? "فيديو/سلسلة"
+				? "مقطع/سلسلة"
 				: "عنصر";
 
 		// Create a styled confirm dialog
@@ -905,7 +905,7 @@ export class BulkActions {
 
 		const itemType =
 			this.props.contentType === CONTENT_TYPE.VIDEO
-				? "فيديو/سلسلة"
+				? "مقطع/سلسلة"
 				: "عنصر";
 
 		// Show progress notification

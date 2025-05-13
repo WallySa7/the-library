@@ -314,8 +314,8 @@ export class SettingsTab extends PluginSettingTab {
 		// Video template setting with editor button
 		this.addTemplateWithEditor(
 			containerEl,
-			"قالب الفيديو",
-			"قالب الملاحظات لفيديوهات يوتيوب",
+			"قالب المقطع",
+			"قالب الملاحظات لمقاطع يوتيوب",
 			"video"
 		);
 

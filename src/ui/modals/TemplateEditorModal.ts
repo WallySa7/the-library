@@ -81,7 +81,7 @@ export class TemplateEditorModal extends Modal {
 	 */
 	private addTitle() {
 		const titleMap: Record<TemplateType, string> = {
-			video: "تعديل قالب الفيديو",
+			video: "تعديل قالب المقطع",
 			playlist: "تعديل قالب السلسلة",
 		};
 
