@@ -1016,12 +1016,15 @@ export class DataService extends BaseDataService {
 		// Convert all items to CSV rows
 		const rows = filteredItems
 			.map((item) => {
+				const durationValue =
+					"duration" in item ? `'${item.duration}` : "";
+
 				return [
 					escapeField(item.title),
 					escapeField("presenter" in item ? item.presenter : ""),
 					escapeField(item.type),
 					escapeField(item.status),
-					escapeField("duration" in item ? item.duration : ""),
+					escapeField(durationValue),
 					escapeField("url" in item ? item.url : ""),
 					escapeField(item.dateAdded),
 					escapeField(
