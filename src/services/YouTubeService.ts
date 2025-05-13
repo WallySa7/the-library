@@ -1,5 +1,6 @@
 /**
  * Service for YouTube API integration
+ * Handles fetching metadata from YouTube
  */
 import { request } from "obsidian";
 import {
@@ -14,12 +15,21 @@ import {
 } from "../utils/durationUtils";
 
 /**
- * Service for interacting with YouTube API
+ * Service for interacting with YouTube API and fetching video metadata
  */
 export class YouTubeService {
 	private apiKey: string;
 	private cache: Map<string, { data: any; timestamp: number }> = new Map();
-	private readonly CACHE_TTL = 3600000; // 1 hour cache time
+
+	// Cache TTL - 1 hour (in milliseconds)
+	private readonly CACHE_TTL = 3600000;
+
+	// External service URLs
+	private readonly CREATETHAT_API_URL =
+		"https://www.createthat.ai/api/youtube-playlist-length";
+	private readonly LENOSTUBE_URL =
+		"https://www.lenostube.com/en/youtube-playlist-length-calculator";
+	private readonly YOUTUBE_OEMBED_API = "https://www.youtube.com/oembed";
 
 	/**
 	 * Creates a new YouTubeService
@@ -149,7 +159,7 @@ export class YouTubeService {
 			let thumbnailUrl = this.getBestThumbnail(item.snippet.thumbnails);
 
 			try {
-				// Try to get first video thumbnail and calculate duration
+				// Try to get first video thumbnail
 				const videosResponse = await this.getPlaylistVideos(
 					playlistId,
 					1
@@ -257,10 +267,7 @@ export class YouTubeService {
 			return { success: true, data: videos };
 		} catch (error) {
 			console.error("Error fetching playlist videos:", error);
-			return {
-				success: false,
-				error: "فشل في جلب مقاطع قائمة التشغيل",
-			};
+			return { success: false, error: "فشل في جلب مقاطع قائمة التشغيل" };
 		}
 	}
 
@@ -315,6 +322,24 @@ export class YouTubeService {
 				);
 			}
 
+			// If API key is available, calculate duration from videos
+			if (this.apiKey) {
+				try {
+					duration = await this.calculateDurationFromVideos(
+						playlistId
+					);
+					if (duration) {
+						this.saveToCache(cacheKey, duration);
+						return { success: true, data: duration };
+					}
+				} catch (error) {
+					console.warn(
+						"Failed to calculate duration from videos:",
+						error
+					);
+				}
+			}
+
 			return {
 				success: false,
 				error: "Could not retrieve playlist duration",
@@ -329,6 +354,73 @@ export class YouTubeService {
 	}
 
 	/**
+	 * Calculates playlist duration from individual videos
+	 * @param playlistId - Playlist ID
+	 * @returns Formatted duration or null if failed
+	 */
+	private async calculateDurationFromVideos(
+		playlistId: string
+	): Promise<string | null> {
+		if (!this.apiKey) return null;
+
+		try {
+			// Get playlist videos (maximum 50 to avoid API limits)
+			const videosResponse = await this.getPlaylistVideos(playlistId, 50);
+			if (!videosResponse.success || !videosResponse.data?.length) {
+				return null;
+			}
+
+			// Fetch details for each video to get durations
+			let totalSeconds = 0;
+			const videos = videosResponse.data;
+
+			// Process videos in batches of 5 to avoid rate limits
+			const batchSize = 5;
+			for (let i = 0; i < videos.length; i += batchSize) {
+				const batch = videos.slice(i, i + batchSize);
+				const batchRequests = batch.map((video) =>
+					this.getVideoDetails(video.videoId)
+						.then((response) => {
+							if (response.success && response.data?.duration) {
+								// Convert HH:MM:SS to seconds and add to total
+								const parts = response.data.duration
+									.split(":")
+									.map(Number);
+								const seconds =
+									parts[0] * 3600 + parts[1] * 60 + parts[2];
+								return seconds;
+							}
+							return 0;
+						})
+						.catch(() => 0)
+				);
+
+				const batchResults = await Promise.all(batchRequests);
+				totalSeconds += batchResults.reduce(
+					(sum, seconds) => sum + seconds,
+					0
+				);
+
+				// Add a small delay between batches
+				if (i + batchSize < videos.length) {
+					await new Promise((resolve) => setTimeout(resolve, 300));
+				}
+			}
+
+			// Multiply by ratio if we didn't process all videos
+			if (videos.length < videosResponse.data.length) {
+				const ratio = videosResponse.data.length / videos.length;
+				totalSeconds = Math.round(totalSeconds * ratio);
+			}
+
+			return secondsToHMS(totalSeconds);
+		} catch (error) {
+			console.error("Error calculating duration from videos:", error);
+			return null;
+		}
+	}
+
+	/**
 	 * Gets playlist duration from createthat.ai service
 	 * @param playlistId - YouTube playlist ID
 	 * @returns Formatted duration string or null
@@ -337,7 +429,7 @@ export class YouTubeService {
 		playlistId: string
 	): Promise<string | null> {
 		const response = await request({
-			url: `https://www.createthat.ai/api/youtube-playlist-length?playlistId=${playlistId}`,
+			url: `${this.CREATETHAT_API_URL}?playlistId=${playlistId}`,
 			method: "GET",
 		});
 
@@ -373,7 +465,7 @@ export class YouTubeService {
 		playlistId: string
 	): Promise<string | null> {
 		const response = await request({
-			url: `https://www.lenostube.com/en/youtube-playlist-length-calculator/?playlist_id=${playlistId}`,
+			url: `${this.LENOSTUBE_URL}/?playlist_id=${playlistId}`,
 			method: "GET",
 		});
 
@@ -388,7 +480,7 @@ export class YouTubeService {
 	/**
 	 * Parses HTML response from lenostube.com to extract duration
 	 * @param html - HTML response
-	 * @returns Formatted duration string or null
+	 * @returns Formatted duration string or null if not found
 	 */
 	private parseLenostubeResponse(html: string): string | null {
 		const totalDurationMatch = html.match(
@@ -404,42 +496,34 @@ export class YouTubeService {
 			}
 		}
 
-		// If the direct approach fails, use table parsing
-		try {
-			const parser = new DOMParser();
-			const doc = parser.parseFromString(html, "text/html");
+		// Fall back to extracting duration from table
+		let totalSeconds = 0;
 
-			const table = doc.querySelector("#playlist-table");
-			if (!table) {
-				return null;
-			}
+		// Look for duration values in the HTML
+		const durationPattern = /(\d+:\d+:\d+)|(\d+:\d+)/g;
+		const durationMatches = html.match(durationPattern);
 
-			const rows = table.querySelectorAll("tbody tr");
-			let totalSeconds = 0;
-
-			for (const row of Array.from(rows)) {
-				const durationCell = row.querySelector("td:nth-child(3)");
-				if (!durationCell) continue;
-
-				const durationText = durationCell.textContent?.trim();
-				if (!durationText) continue;
-
+		if (durationMatches && durationMatches.length > 0) {
+			durationMatches.forEach((durationText) => {
 				try {
-					const seconds = parseDurationText(durationText);
-					totalSeconds += seconds;
+					// Convert each duration to seconds and add to total
+					const parts = durationText.split(":").map(Number);
+					if (parts.length === 3) {
+						totalSeconds +=
+							parts[0] * 3600 + parts[1] * 60 + parts[2];
+					} else if (parts.length === 2) {
+						totalSeconds += parts[0] * 60 + parts[1];
+					}
 				} catch (e) {
-					console.warn(
-						`Could not parse duration: ${durationText}`,
-						e
-					);
+					// Skip problematic durations
 				}
-			}
+			});
 
+			// Return formatted duration
 			return secondsToHMS(totalSeconds);
-		} catch (error) {
-			console.warn("Failed to parse lenostube table", error);
-			return null;
 		}
+
+		return null;
 	}
 
 	/**
@@ -457,64 +541,6 @@ export class YouTubeService {
 	}
 
 	/**
-	 * Converts ISO 8601 duration to seconds
-	 * @param isoDuration - ISO duration string (PT1H30M15S)
-	 * @returns Duration in seconds
-	 */
-	private isoDurationToSeconds(isoDuration: string): number {
-		if (!isoDuration || !isoDuration.startsWith("PT")) {
-			return 0;
-		}
-
-		const timeStr = isoDuration.substring(2);
-		let hours = 0,
-			minutes = 0,
-			seconds = 0;
-
-		const hoursMatch = timeStr.match(/(\d+)H/);
-		const minutesMatch = timeStr.match(/(\d+)M/);
-		const secondsMatch = timeStr.match(/(\d+)S/);
-
-		if (hoursMatch) hours = parseInt(hoursMatch[1], 10);
-		if (minutesMatch) minutes = parseInt(minutesMatch[1], 10);
-		if (secondsMatch) seconds = parseInt(secondsMatch[1], 10);
-
-		return hours * 3600 + minutes * 60 + seconds;
-	}
-
-	/**
-	 * Retrieves data from cache if not expired
-	 * @param key - Cache key
-	 * @returns Cached data or null if expired/not found
-	 */
-	private getFromCache<T>(key: string): T | null {
-		const cached = this.cache.get(key);
-		if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-			return cached.data as T;
-		}
-		return null;
-	}
-
-	/**
-	 * Saves data to cache
-	 * @param key - Cache key
-	 * @param data - Data to cache
-	 */
-	private saveToCache(key: string, data: any): void {
-		this.cache.set(key, {
-			data,
-			timestamp: Date.now(),
-		});
-	}
-
-	/**
-	 * Clears all cached data
-	 */
-	private clearCache(): void {
-		this.cache.clear();
-	}
-
-	/**
 	 * Fallback method to get video details without API key
 	 * @param videoId - YouTube video ID
 	 * @returns Response with basic video info
@@ -524,7 +550,7 @@ export class YouTubeService {
 	): Promise<APIResponse<VideoDetails>> {
 		try {
 			// Use YouTube oEmbed API (doesn't require API key)
-			const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+			const oembedUrl = `${this.YOUTUBE_OEMBED_API}?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
 
 			try {
 				const response = await request({
@@ -594,10 +620,7 @@ export class YouTubeService {
 			}
 		} catch (error) {
 			console.error("Error in playlist fallback:", error);
-			return {
-				success: false,
-				error: "فشل في جلب تفاصيل قائمة التشغيل",
-			};
+			return { success: false, error: "فشل في جلب تفاصيل قائمة التشغيل" };
 		}
 	}
 
@@ -617,5 +640,37 @@ export class YouTubeService {
 		if (thumbnails.default) return thumbnails.default.url;
 
 		return "";
+	}
+
+	/**
+	 * Retrieves data from cache if not expired
+	 * @param key - Cache key
+	 * @returns Cached data or null if expired/not found
+	 */
+	private getFromCache<T>(key: string): T | null {
+		const cached = this.cache.get(key);
+		if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+			return cached.data as T;
+		}
+		return null;
+	}
+
+	/**
+	 * Saves data to cache
+	 * @param key - Cache key
+	 * @param data - Data to cache
+	 */
+	private saveToCache(key: string, data: any): void {
+		this.cache.set(key, {
+			data,
+			timestamp: Date.now(),
+		});
+	}
+
+	/**
+	 * Clears all cached data
+	 */
+	private clearCache(): void {
+		this.cache.clear();
 	}
 }

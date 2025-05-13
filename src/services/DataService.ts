@@ -2,7 +2,7 @@
  * Core data service for managing library content
  * Provides methods for CRUD operations on videos, playlists, and more
  */
-import { App, TFile, TFolder, Notice } from "obsidian";
+import { App, TFile, Notice, TFolder } from "obsidian";
 import { BaseDataService } from "./BaseDataService";
 import { LibrarySettings } from "../core/settings";
 import {
@@ -12,19 +12,21 @@ import {
 	VideoData,
 	PlaylistData,
 	FolderData,
+	ContentItem,
 } from "../core/contentTypes";
 import {
 	ContentType,
 	BulkOperation,
 	BulkOperationResult,
 	ImportResult,
+	ExportOptions,
 } from "../core";
 import { CONTENT_TYPE } from "../core/constants";
 import { sanitizeFileName, formatDate, renderTemplate } from "../utils";
 
 /**
  * Core data service for all library content operations
- * Manages data for videos, playlists, books, and benefits
+ * Manages data for videos, playlists, and other content types
  */
 export class DataService extends BaseDataService {
 	/**
@@ -38,9 +40,10 @@ export class DataService extends BaseDataService {
 
 	/**
 	 * Gets all video content including videos, playlists, and related metadata
+	 * @param forceRefresh - Whether to bypass the cache and force a refresh
 	 * @returns Object containing content items and metadata
 	 */
-	async getVideoContent(): Promise<{
+	async getVideoContent(forceRefresh = false): Promise<{
 		items: LibraryItem[];
 		presenters: string[];
 		categories: string[];
@@ -121,7 +124,7 @@ export class DataService extends BaseDataService {
 						categories,
 						tags,
 						thumbnailUrl,
-					});
+					} as PlaylistItem);
 				}
 				// Process as regular video
 				else {
@@ -149,19 +152,21 @@ export class DataService extends BaseDataService {
 						dateAdded,
 						categories,
 						tags,
-					});
+					} as VideoItem);
 				}
 			} catch (error) {
 				console.error(`Error processing file ${file.path}:`, error);
 			}
 		}
 
-		return {
+		const result = {
 			items,
 			presenters: Array.from(presenterSet).sort(),
 			categories: Array.from(categorySet).sort(),
 			tags: Array.from(tagSet).sort(),
 		};
+
+		return result;
 	}
 
 	/**
@@ -220,6 +225,7 @@ export class DataService extends BaseDataService {
 
 			// Create file
 			await this.app.vault.create(fullPath, content);
+
 			return true;
 		} catch (error) {
 			console.error("Error creating video note:", error);
@@ -284,6 +290,7 @@ export class DataService extends BaseDataService {
 
 			// Create file
 			await this.app.vault.create(fullPath, content);
+
 			return true;
 		} catch (error) {
 			console.error("Error creating playlist note:", error);
@@ -385,6 +392,7 @@ export class DataService extends BaseDataService {
 
 			// Write the updated content back to the file
 			await this.app.vault.modify(file, updatedContent);
+
 			return true;
 		} catch (error) {
 			console.error("Error updating status:", error);
@@ -418,6 +426,7 @@ export class DataService extends BaseDataService {
 
 			// Write the updated content back to the file
 			await this.app.vault.modify(file, updatedContent);
+
 			return true;
 		} catch (error) {
 			console.error("Error updating tags:", error);
@@ -454,6 +463,7 @@ export class DataService extends BaseDataService {
 
 			// Write the updated content back to the file
 			await this.app.vault.modify(file, updatedContent);
+
 			return true;
 		} catch (error) {
 			console.error("Error updating categories:", error);
@@ -476,6 +486,7 @@ export class DataService extends BaseDataService {
 			}
 
 			await this.app.vault.delete(file);
+
 			return { success: true };
 		} catch (error) {
 			console.error("Error deleting item:", error);
@@ -572,14 +583,6 @@ export class DataService extends BaseDataService {
 		}
 
 		return { success, failed };
-	}
-
-	/**
-	 * Gets list of presenters from existing content
-	 * @returns Array of presenter names
-	 */
-	async getPresenterList(): Promise<string[]> {
-		return this.getPresenters();
 	}
 
 	/**
@@ -690,15 +693,6 @@ export class DataService extends BaseDataService {
 		});
 	}
 
-	/**
-	 * Delegates to VideoService.importVideoData if available
-	 * @param jsonData - JSON data to import
-	 * @returns Import result
-	 */
-	async importVideoData(jsonData: string): Promise<ImportResult> {
-		// Otherwise use existing importVideos function
-		return this.importVideos(jsonData);
-	}
 	/**
 	 * Imports videos data from JSON
 	 * @param jsonData - JSON string with video data
@@ -900,6 +894,26 @@ export class DataService extends BaseDataService {
 				failed: 1,
 				messages: ["خطأ في تنسيق البيانات المستوردة"],
 			};
+		}
+	}
+
+	/**
+	 * Exports library content to various formats
+	 * @param options - Export options
+	 * @returns Exported content as string in the requested format
+	 */
+	async exportContent(options: ExportOptions): Promise<string> {
+		const { format, selectedItems = [] } = options;
+
+		switch (format) {
+			case "json":
+				return this.exportToJson(selectedItems);
+			case "jsonWithContent":
+				return this.exportWithContent(selectedItems);
+			case "csv":
+				return this.exportToCsv(selectedItems);
+			default:
+				throw new Error(`Unsupported export format: ${format}`);
 		}
 	}
 

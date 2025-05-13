@@ -148,7 +148,7 @@ export class VideoModal extends BaseModal {
 			);
 
 			this.plugin.dataService
-				.getPresenterList()
+				.getPresenters()
 				.then((presenters: any[]) => {
 					presenters.forEach((presenter) => {
 						const option = datalist.createEl("option");
