@@ -53,16 +53,25 @@ export class FilterBar {
 	constructor(props: FilterBarProps) {
 		this.props = props;
 
+		// Subscribe to filter state changes to update UI
+		const unsubscribeFilter = this.props.filterState.subscribe(
+			FilterStateEvents.FILTER_UPDATED,
+			() => {
+				this.updateFilteredFiltersDisplay();
+			}
+		);
+		this.stateUnsubscribes.push(unsubscribeFilter);
+
 		// Subscribe to available options updates if using dynamic filtering
 		if (props.useDynamicFiltering) {
-			const unsubscribe = this.props.filterState.subscribe(
+			const unsubscribeOptions = this.props.filterState.subscribe(
 				FilterStateEvents.OPTIONS_UPDATED,
 				() => {
 					this.updateFilterOptions();
 				}
 			);
 
-			this.stateUnsubscribes.push(unsubscribe);
+			this.stateUnsubscribes.push(unsubscribeOptions);
 		}
 	}
 
@@ -662,9 +671,6 @@ export class FilterBar {
 			}
 		}
 
-		// Update selected filters display
-		this.renderSelectedFilters(this.container!);
-
 		// Notify about filter change
 		this.props.onFilterChange();
 	}
@@ -687,6 +693,55 @@ export class FilterBar {
 		} else {
 			input.placeholder = `${selectedValues.length} مختارة`;
 			input.value = "";
+		}
+	}
+
+	/**
+	 * Updates the UI when filter state changes
+	 * This is called from the filter state subscription
+	 */
+	private updateFilteredFiltersDisplay(): void {
+		if (this.container) {
+			// Update the selected filters display
+			this.renderSelectedFilters(this.container);
+
+			// Update dropdown displays to match the current state
+			const filterState = this.props.filterState.getState();
+
+			// Update each dropdown display and its checkboxes
+			this.dropdowns.forEach((dropdown, type) => {
+				const searchInput = dropdown.querySelector(
+					".library-multi-select-search"
+				) as HTMLInputElement;
+
+				if (searchInput) {
+					// Get the correct array of selected values based on filter type
+					let selectedValues: string[] = [];
+					if (type === "status")
+						selectedValues = filterState.statuses;
+					else if (type === "presenter")
+						selectedValues = filterState.presenters;
+					else if (type === "type")
+						selectedValues = filterState.types;
+					else if (type === "category")
+						selectedValues = filterState.categories;
+					else if (type === "tag") selectedValues = filterState.tags;
+
+					// Update the display text
+					this.updateSelectionDisplay(searchInput, selectedValues);
+
+					// Update checkbox states
+					const options = dropdown.querySelectorAll(
+						"input[type=checkbox]"
+					);
+
+					options.forEach((option) => {
+						const value = (option as HTMLInputElement).value;
+						(option as HTMLInputElement).checked =
+							selectedValues.includes(value);
+					});
+				}
+			});
 		}
 	}
 
