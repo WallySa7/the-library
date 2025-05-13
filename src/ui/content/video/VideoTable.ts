@@ -2,7 +2,7 @@
  * Component for displaying videos in a table format
  */
 import { Menu, setIcon, moment } from "obsidian";
-import { ContentComponentProps } from "../../../core/uiTypes";
+import { ContentComponentProps } from "../../../core/";
 import {
 	LibraryItem,
 	VideoItem,
@@ -10,7 +10,7 @@ import {
 } from "../../../core/contentTypes";
 import { TableColumnConfig } from "../../../core/uiTypes";
 import { ColumnConfigModal } from "../../modals/ColumnConfigModal";
-import { ItemUtils } from "../../../utils/itemUtils";
+import { ItemUtils } from "../../../utils";
 
 /**
  * Props for VideoTable component

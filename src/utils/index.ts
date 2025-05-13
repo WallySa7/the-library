@@ -15,6 +15,8 @@ export * from "./templateUtils";
 export * from "./durationUtils";
 export * from "./youtubeUtils";
 
+export * from "./itemUtils";
+
 /**
  * For backward compatibility, we re-export some functions with their original names.
  * This helps prevent breaking changes when migrating to the new structure.
