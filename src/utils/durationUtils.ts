@@ -14,6 +14,7 @@ export function formatHMS(
 	minutes: number,
 	seconds: number
 ): string {
+	// For very long durations, don't limit hours to 2 digits
 	return [
 		Math.floor(hours).toString().padStart(2, "0"),
 		Math.floor(minutes).toString().padStart(2, "0"),
@@ -101,7 +102,12 @@ export function parseYouTubeDuration(duration: string): string {
 	if (minutesMatch) minutes = parseInt(minutesMatch[1], 10);
 	if (secondsMatch) seconds = parseInt(secondsMatch[1], 10);
 
-	return formatHMS(hours, minutes, seconds);
+	// Handle long durations properly - don't limit to 2 digits for hours
+	const formattedHours = Math.floor(hours).toString().padStart(2, "0");
+	const formattedMinutes = Math.floor(minutes).toString().padStart(2, "0");
+	const formattedSeconds = Math.floor(seconds).toString().padStart(2, "0");
+
+	return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
 }
 
 /**
