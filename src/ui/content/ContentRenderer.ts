@@ -65,6 +65,9 @@ export class ContentRenderer {
 
 		// Initialize filtered items
 		this.filteredItems = this.getFilteredItemsInternal();
+
+		// Update filter options based on current filtered items
+		this.updateFilterOptions();
 	}
 
 	/**
