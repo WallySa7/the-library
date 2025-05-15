@@ -9,7 +9,7 @@ import { FilterStateEvents } from "../../core/state/FilterState";
 import { SelectionStateEvents } from "../../core/state/SelectionState";
 import { VideoTable } from "./video/VideoTable";
 import { VideoCard } from "./video/VideoCard";
-import { VideoStats } from "./video/VideoStats";
+import { AnalyticsDashboard } from "./video/AdvancedAnalyticsDashboard";
 
 /**
  * Props for ContentRenderer
@@ -35,7 +35,7 @@ export class ContentRenderer {
 	private stateUnsubscribes: (() => void)[] = [];
 
 	// Component references
-	private statsComponent: VideoStats | null = null;
+	private statsComponent: AnalyticsDashboard | null = null;
 	private contentComponent: VideoTable | VideoCard | null = null;
 
 	/**
@@ -88,7 +88,7 @@ export class ContentRenderer {
 				cls: "library-stats-section",
 			});
 
-			this.statsComponent = new VideoStats({
+			this.statsComponent = new AnalyticsDashboard({
 				...this.props,
 				items: this.props.items,
 			});

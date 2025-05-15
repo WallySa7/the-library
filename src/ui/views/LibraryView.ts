@@ -20,7 +20,7 @@ import { BulkActions } from "../components/BulkActions";
 import { ContentRenderer } from "../content/ContentRenderer";
 import { ContentType } from "../../core/uiTypes";
 import { LibraryItem } from "../../core/contentTypes";
-import { VideoStats } from "../content/video/VideoStats";
+import { AnalyticsDashboard } from "../content/video/AdvancedAnalyticsDashboard";
 
 /**
  * Main view for displaying library content
@@ -56,6 +56,7 @@ export class LibraryView extends ItemView {
 	private bulkActionsComponent: BulkActions | null = null;
 	private contentRenderer: ContentRenderer | null = null;
 	private paginationComponent: Pagination | null = null;
+	private dashboardComponent: AnalyticsDashboard | null = null;
 
 	// State event unsubscribe functions
 	private stateUnsubscribes: (() => void)[] = [];
@@ -250,6 +251,12 @@ export class LibraryView extends ItemView {
 			this.paginationComponent.destroy?.();
 			this.paginationComponent = null;
 		}
+
+		// Clean up dashboard component
+		if (this.dashboardComponent) {
+			this.dashboardComponent.destroy?.();
+			this.dashboardComponent = null;
+		}
 	}
 
 	/**
@@ -293,8 +300,8 @@ export class LibraryView extends ItemView {
 		// Render the header
 		this.renderHeader();
 
-		// Render stats
-		this.renderStats();
+		// Render stats with advanced analytics dashboard
+		this.renderAdvancedStats();
 
 		// Render bulk actions bar
 		this.renderBulkActions();
@@ -359,14 +366,14 @@ export class LibraryView extends ItemView {
 	}
 
 	/**
-	 * Renders the stats component
+	 * Renders the analytics dashboard component
 	 */
-	private renderStats(): void {
+	private renderAdvancedStats(): void {
 		if (!this.statsContainer) return;
 		this.statsContainer.empty();
 
 		if (this.contentType === CONTENT_TYPE.VIDEO) {
-			const statsComponent = new VideoStats({
+			this.dashboardComponent = new AnalyticsDashboard({
 				app: this.app,
 				plugin: this.plugin,
 				settings: this.plugin.settings,
@@ -377,7 +384,7 @@ export class LibraryView extends ItemView {
 				onRefresh: this.refresh.bind(this),
 			});
 
-			statsComponent.render(this.statsContainer);
+			this.dashboardComponent.render(this.statsContainer);
 		}
 	}
 
