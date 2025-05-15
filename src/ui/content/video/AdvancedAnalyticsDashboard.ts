@@ -3,7 +3,7 @@
  * Provides detailed statistics and visualizations for library content
  * with collapsible sections
  */
-import { moment, setIcon } from "obsidian";
+import { moment, setIcon, TFile } from "obsidian";
 import { ContentComponentProps } from "../../../core/uiTypes";
 import {
 	LibraryItem,
@@ -60,7 +60,7 @@ interface CoreStatistics {
 	/** Content added in last 30 days */
 	recentlyAddedCount: number;
 	/** Total size in memory (MB) */
-	estimatedSizeMB: number;
+	SizeMB: number;
 }
 
 /**
@@ -405,12 +405,10 @@ export class AnalyticsDashboard {
 			cls: "library-additional-stats",
 		});
 
-		// Estimate storage size
+		// Display actual storage size
 		additionalStats.createEl("div", {
-			cls: "library-storage-estimate",
-			text: `الحجم التقديري للمكتبة: ${this.coreStats.estimatedSizeMB.toFixed(
-				2
-			)} ميجابايت`,
+			cls: "library-storage-size",
+			text: `حجم المكتبة: ${this.coreStats.SizeMB.toFixed(2)} ميجابايت`,
 		});
 
 		this.coreStatsSection = sectionContent;
@@ -1274,9 +1272,17 @@ export class AnalyticsDashboard {
 		const avgVideoDurationSeconds =
 			videoCount > 0 ? Math.round(videoTotalSeconds / videoCount) : 0;
 
-		// Estimate storage size (based on rough estimate)
-		// Assuming each video note is about 2KB and metadata adds another 3KB per item
-		const estimatedSizeMB = (this.props.items.length * 5) / 1024;
+		// Calculate actual storage size
+		let totalSizeBytes = 0;
+		this.props.items.forEach((item) => {
+			const file = this.props.app.vault.getAbstractFileByPath(
+				item.filePath
+			);
+			if (file instanceof TFile) {
+				totalSizeBytes += file.stat.size;
+			}
+		});
+		const actualSizeMB = totalSizeBytes / (1024 * 1024); // Convert bytes to MB
 
 		return {
 			videoCount,
@@ -1289,7 +1295,7 @@ export class AnalyticsDashboard {
 			averageVideoDurationSeconds: avgVideoDurationSeconds,
 			averageVideoDuration: formatDuration(avgVideoDurationSeconds),
 			recentlyAddedCount,
-			estimatedSizeMB,
+			SizeMB: actualSizeMB, // Now using actual size
 		};
 	}
 
