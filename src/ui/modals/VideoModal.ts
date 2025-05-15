@@ -13,6 +13,8 @@ import {
 	extractPlaylistId,
 	determineYoutubeUrlType,
 } from "../../utils/youtubeUtils";
+import { STATUS } from "src/core/constants";
+import { formatDate } from "src/utils";
 
 /**
  * Modal for adding a new video or playlist
@@ -577,6 +579,17 @@ export class VideoModal extends BaseModal {
 						.filter((c) => c)
 				: [];
 
+			// Set initial start and completion dates based on status
+			const today = formatDate(new Date(), this.settings.dateFormat);
+			let startDate = "";
+			let completionDate = "";
+
+			if (status === STATUS.WATCHED) {
+				completionDate = today;
+			} else if (status === STATUS.IN_PROGRESS) {
+				startDate = today;
+			}
+
 			// Create the note
 			this.loadingMessage = "جاري إنشاء الملاحظة...";
 			this.updateLoadingUI();
@@ -593,6 +606,8 @@ export class VideoModal extends BaseModal {
 				categories,
 				thumbnailUrl,
 				status,
+				startDate,
+				completionDate,
 			});
 
 			if (success) {
@@ -664,6 +679,17 @@ export class VideoModal extends BaseModal {
 						.filter((c) => c)
 				: [];
 
+			// Set initial start and completion dates based on status
+			const today = formatDate(new Date(), this.settings.dateFormat);
+			let startDate = "";
+			let completionDate = "";
+
+			if (status === STATUS.WATCHED) {
+				completionDate = today;
+			} else if (status === STATUS.IN_PROGRESS) {
+				startDate = today;
+			}
+
 			// Create the note
 			const success = await this.plugin.dataService.createPlaylist({
 				url,
@@ -677,6 +703,8 @@ export class VideoModal extends BaseModal {
 				categories,
 				thumbnailUrl: thumbnailUrl || this.playlistThumbnailUrl,
 				tags,
+				startDate,
+				completionDate,
 			});
 
 			if (success) {

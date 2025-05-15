@@ -48,6 +48,20 @@ export const DEFAULT_VIDEO_COLUMNS: TableColumnConfig[] = [
 		label: "المدة",
 		sortKey: "duration",
 	},
+	{
+		id: "startDate",
+		enabled: false,
+		order: 6,
+		label: "تاريخ البدء",
+		sortKey: "startDate",
+	},
+	{
+		id: "completionDate",
+		enabled: false,
+		order: 7,
+		label: "تاريخ الانتهاء",
+		sortKey: "completionDate",
+	},
 	{ id: "tags", enabled: false, order: 6, label: "الوسوم" },
 	{ id: "categories", enabled: false, order: 7, label: "التصنيفات" },
 	{
@@ -86,6 +100,8 @@ ${FRONTMATTER.TYPE}: {{type}}
 ${FRONTMATTER.PRESENTER}: {{presenter}}
 ${FRONTMATTER.DURATION}: {{duration}}
 ${FRONTMATTER.DATE_ADDED}: {{date}}
+${FRONTMATTER.START_DATE}: {{startDate}}
+${FRONTMATTER.COMPLETION_DATE}: {{completionDate}}
 ${FRONTMATTER.URL}: {{url}}
 ${FRONTMATTER.VIDEO_ID}: {{videoId}}
 ${FRONTMATTER.TAGS}: {{tags}}
@@ -103,6 +119,8 @@ ${FRONTMATTER.STATUS}: {{status}}
 - **النوع:** {{type}}
 - **الملقي:** {{presenter}}
 - **الحالة:** {{status}}
+{{#if startDate}}- **تاريخ البدء:** {{startDate}}{{/if}}
+{{#if completionDate}}- **تاريخ الانتهاء:** {{completionDate}}{{/if}}
 
 [مشاهدة على يوتيوب]({{url}})`;
 
@@ -119,6 +137,8 @@ ${FRONTMATTER.ITEM_COUNT}: {{itemCount}}
 ${FRONTMATTER.TOTAL_DURATION}: "{{duration}}"
 ${FRONTMATTER.STATUS}: "{{status}}"
 ${FRONTMATTER.DATE_ADDED}: "{{dateAdded}}"
+${FRONTMATTER.START_DATE}: "{{startDate}}"
+${FRONTMATTER.COMPLETION_DATE}: "{{completionDate}}"
 ${FRONTMATTER.CATEGORIES}: {{categories}}
 ${FRONTMATTER.THUMBNAIL}: "{{thumbnailUrl}}"
 ${FRONTMATTER.TAGS}: {{tags}}
@@ -131,6 +151,8 @@ ${FRONTMATTER.TAGS}: {{tags}}
 - **المدة الإجمالية**: {{duration}}
 - **الحالة**: {{status}}
 - **تاريخ الإضافة**: {{date}}
+{{#if startDate}}- **تاريخ البدء**: {{startDate}}{{/if}}
+{{#if completionDate}}- **تاريخ الانتهاء**: {{completionDate}}{{/if}}
 
 ## الرابط
 [مشاهدة السلسلة على يوتيوب]({{url}})

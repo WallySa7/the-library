@@ -21,7 +21,7 @@ import {
 	ImportResult,
 	ExportOptions,
 } from "../core";
-import { CONTENT_TYPE, FRONTMATTER } from "../core/constants";
+import { CONTENT_TYPE, FRONTMATTER, STATUS } from "../core/constants";
 import { sanitizeFileName, formatDate, renderTemplate } from "../utils";
 
 /**
@@ -96,6 +96,11 @@ export class DataService extends BaseDataService {
 						this.settings.dateFormat
 					);
 
+				// Get start and completion dates
+				const startDate = frontmatter[FRONTMATTER.START_DATE] || "";
+				const completionDate =
+					frontmatter[FRONTMATTER.COMPLETION_DATE] || "";
+
 				// Process categories and tags
 				const categories = this.normalizeTags(
 					frontmatter[FRONTMATTER.CATEGORIES]
@@ -129,6 +134,8 @@ export class DataService extends BaseDataService {
 						type: fileType,
 						status,
 						dateAdded,
+						startDate,
+						completionDate,
 						categories,
 						tags,
 						thumbnailUrl,
@@ -160,6 +167,8 @@ export class DataService extends BaseDataService {
 						type: fileType || "مقطع", // Default to "video" in Arabic
 						status,
 						dateAdded,
+						startDate,
+						completionDate,
 						categories,
 						tags,
 					} as VideoItem);
@@ -192,6 +201,22 @@ export class DataService extends BaseDataService {
 			);
 			const status =
 				data.status || this.settings.progressTracking.defaultStatus;
+
+			// Initialize start and completion dates
+			let startDate = data.startDate || "";
+			let completionDate = data.completionDate || "";
+
+			// Set dates based on status if not already provided
+			if (status === STATUS.WATCHED) {
+				// For "watched" status, set both dates to today if not provided
+				completionDate = formattedDate;
+				if (!startDate) {
+					startDate = formattedDate;
+				}
+			} else if (status === STATUS.IN_PROGRESS) {
+				// For "in progress", set start date to today
+				startDate = formattedDate;
+			}
 
 			// Resolve folder path based on folder rules
 			const folderPath = await this.resolveFolderPath({
@@ -226,6 +251,8 @@ export class DataService extends BaseDataService {
 					? data.categories.join(", ")
 					: data.categories,
 				status,
+				startDate,
+				completionDate,
 			});
 
 			// Create folder if needed
@@ -257,6 +284,22 @@ export class DataService extends BaseDataService {
 			const status =
 				data.status || this.settings.progressTracking.defaultStatus;
 
+			// Initialize start and completion dates
+			let startDate = data.startDate || "";
+			let completionDate = data.completionDate || "";
+
+			// Set dates based on status if not already provided
+			if (status === STATUS.WATCHED) {
+				// For "watched" status, set both dates to today if not provided
+				completionDate = formattedDate;
+				if (!startDate) {
+					startDate = formattedDate;
+				}
+			} else if (status === STATUS.IN_PROGRESS) {
+				// For "in progress", set start date to today
+				startDate = formattedDate;
+			}
+
 			// Resolve folder path based on folder rules
 			const folderPath = await this.resolveFolderPath({
 				type: data.type,
@@ -284,6 +327,8 @@ export class DataService extends BaseDataService {
 				date: formattedDate,
 				dateAdded: formattedDate,
 				status,
+				startDate,
+				completionDate,
 				thumbnailUrl: data.thumbnailUrl || "",
 				tags: Array.isArray(data.tags)
 					? data.tags.join(", ")
@@ -393,15 +438,71 @@ export class DataService extends BaseDataService {
 			// Read the file content
 			let content = await this.app.vault.read(file);
 
-			// Update the status in frontmatter using our helper
-			const updatedContent = this.updateFrontmatter(
+			// Get current frontmatter to check current values
+			const frontmatter = this.parseFrontmatter(content);
+			const currentStartDate = frontmatter
+				? frontmatter[FRONTMATTER.START_DATE]
+				: "";
+
+			// Update the status in frontmatter
+			content = this.updateFrontmatter(
 				content,
 				FRONTMATTER.STATUS,
 				newStatus
 			);
 
+			// Update start and completion dates based on status
+			const today = formatDate(new Date(), this.settings.dateFormat);
+
+			if (newStatus === STATUS.WATCHED) {
+				// Set completion date to today when status is "watched"
+				content = this.updateFrontmatter(
+					content,
+					FRONTMATTER.COMPLETION_DATE,
+					today
+				);
+
+				// Also set start date to today if it's currently empty
+				if (!currentStartDate) {
+					content = this.updateFrontmatter(
+						content,
+						FRONTMATTER.START_DATE,
+						today
+					);
+				}
+			} else if (newStatus === STATUS.IN_PROGRESS) {
+				// Set start date to today when status is "in progress"
+				content = this.updateFrontmatter(
+					content,
+					FRONTMATTER.START_DATE,
+					today
+				);
+
+				// Clear completion date when status is "in progress"
+				content = this.updateFrontmatter(
+					content,
+					FRONTMATTER.COMPLETION_DATE,
+					""
+				);
+			} else if (
+				newStatus === STATUS.NOT_WATCHED ||
+				newStatus === STATUS.IN_QUEUE
+			) {
+				// Clear dates when status is "not watched" or "in queue"
+				content = this.updateFrontmatter(
+					content,
+					FRONTMATTER.START_DATE,
+					""
+				);
+				content = this.updateFrontmatter(
+					content,
+					FRONTMATTER.COMPLETION_DATE,
+					""
+				);
+			}
+
 			// Write the updated content back to the file
-			await this.app.vault.modify(file, updatedContent);
+			await this.app.vault.modify(file, content);
 
 			return true;
 		} catch (error) {
@@ -409,7 +510,6 @@ export class DataService extends BaseDataService {
 			return false;
 		}
 	}
-
 	/**
 	 * Updates item tags
 	 * @param filePath - Path to the file

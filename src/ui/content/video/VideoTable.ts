@@ -318,6 +318,15 @@ export class VideoTable {
 							: "غير معروف";
 						break;
 
+					case "startDate":
+						row.createEl("td").textContent = item.startDate || "-";
+						break;
+
+					case "completionDate":
+						row.createEl("td").textContent =
+							item.completionDate || "-";
+						break;
+
 					case "tags":
 						// Tags cell with chips
 						const tagsCell = row.createEl("td", {

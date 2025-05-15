@@ -203,6 +203,32 @@ export class VideoCard {
 				: "غير معروف",
 		});
 
+		// Start date info if available
+		if (item.startDate) {
+			const startDateInfo = contentSection.createEl("div", {
+				cls: "library-card-info",
+			});
+
+			setIcon(startDateInfo, "play-circle");
+
+			startDateInfo.createEl("span", {
+				text: `تاريخ البدء: ${item.startDate}`,
+			});
+		}
+
+		// Completion date info if available
+		if (item.completionDate) {
+			const completionDateInfo = contentSection.createEl("div", {
+				cls: "library-card-info",
+			});
+
+			setIcon(completionDateInfo, "check-circle");
+
+			completionDateInfo.createEl("span", {
+				text: `تاريخ الانتهاء: ${item.completionDate}`,
+			});
+		}
+
 		// Categories if available
 		if (item.categories && item.categories.length > 0) {
 			const categoriesInfo = contentSection.createEl("div", {

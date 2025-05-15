@@ -83,6 +83,10 @@ export const FRONTMATTER = {
 	DURATION: "المدة",
 	/** Date added */
 	DATE_ADDED: "تاريخ الإضافة",
+	/** Start date */
+	START_DATE: "تاريخ البدء",
+	/** Completion date */
+	COMPLETION_DATE: "تاريخ الانتهاء",
 	/** URL */
 	URL: "رابط",
 	/** Video ID */

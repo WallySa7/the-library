@@ -21,6 +21,12 @@ export interface ContentItem {
 	/** Date when the item was added */
 	dateAdded?: string;
 
+	/** Date when watching/reading started */
+	startDate?: string;
+
+	/** Date when watching/reading completed */
+	completionDate?: string;
+
 	/** Associated tags */
 	tags?: string[];
 
@@ -113,6 +119,12 @@ export interface VideoData {
 	/** Viewing status */
 	status?: string;
 
+	/** Start date */
+	startDate?: string;
+
+	/** Completion date */
+	completionDate?: string;
+
 	/** Associated categories */
 	categories?: string[];
 }
@@ -144,6 +156,12 @@ export interface PlaylistData {
 
 	/** Viewing status */
 	status?: string;
+
+	/** Start date */
+	startDate?: string;
+
+	/** Completion date */
+	completionDate?: string;
 
 	/** URL to the playlist thumbnail */
 	thumbnailUrl?: string;

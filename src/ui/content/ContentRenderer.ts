@@ -431,6 +431,18 @@ export class ContentRenderer {
 					aValue = a.dateAdded ? new Date(a.dateAdded).getTime() : 0;
 					bValue = b.dateAdded ? new Date(b.dateAdded).getTime() : 0;
 					break;
+				case "startDate":
+					aValue = a.startDate ? new Date(a.startDate).getTime() : 0;
+					bValue = b.startDate ? new Date(b.startDate).getTime() : 0;
+					break;
+				case "completionDate":
+					aValue = a.completionDate
+						? new Date(a.completionDate).getTime()
+						: 0;
+					bValue = b.completionDate
+						? new Date(b.completionDate).getTime()
+						: 0;
+					break;
 				default:
 					return 0;
 			}
