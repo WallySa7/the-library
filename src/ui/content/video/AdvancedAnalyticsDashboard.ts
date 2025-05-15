@@ -11,6 +11,7 @@ import {
 	PlaylistItem,
 } from "../../../core/contentTypes";
 import { formatDuration } from "../../../utils/durationUtils";
+import { STATUS } from "src/core/constants";
 
 // Storage key for dashboard state
 const DASHBOARD_COLLAPSED_KEY = "library-dashboard-collapsed";
@@ -634,7 +635,7 @@ export class AnalyticsDashboard {
 	private renderPresenterAnalysis(container: HTMLElement): void {
 		const sectionContent = this.createCollapsibleSection(
 			container,
-			"تحليل المقدمين",
+			"تحليل الملقين",
 			"presenters"
 		);
 
@@ -686,7 +687,7 @@ export class AnalyticsDashboard {
 			const thead = presenterTable.createEl("thead");
 			const headerRow = thead.createEl("tr");
 
-			headerRow.createEl("th", { text: "المقدم" });
+			headerRow.createEl("th", { text: "الملقي" });
 			headerRow.createEl("th", { text: "العدد" });
 			headerRow.createEl("th", { text: "النسبة" });
 			headerRow.createEl("th", { text: "المدة" });
@@ -725,7 +726,7 @@ export class AnalyticsDashboard {
 			// Show total count of presenters
 			if (this.presenterStats.length > 5) {
 				sectionContent.createEl("div", {
-					text: `إجمالي المقدمين: ${this.presenterStats.length}`,
+					text: `إجمالي الملقين: ${this.presenterStats.length}`,
 					cls: "library-presenter-count",
 				});
 			}
@@ -1249,9 +1250,9 @@ export class AnalyticsDashboard {
 			totalSeconds += durationSeconds;
 
 			// Count watched content
-			if (item.status === "تمت المشاهدة") {
+			if (item.status === STATUS.WATCHED) {
 				watchedSeconds += durationSeconds;
-			} else if (item.status === "قيد المشاهدة") {
+			} else if (item.status === STATUS.IN_PROGRESS) {
 				// Assume 50% watched for in-progress items
 				watchedSeconds += Math.round(durationSeconds * 0.5);
 			}
@@ -1448,9 +1449,9 @@ export class AnalyticsDashboard {
 			}
 
 			// Calculate watched duration based on status
-			if (item.status === "تمت المشاهدة") {
+			if (item.status === STATUS.WATCHED) {
 				watchedSeconds = durationSeconds;
-			} else if (item.status === "قيد المشاهدة") {
+			} else if (item.status === STATUS.IN_PROGRESS) {
 				watchedSeconds = Math.round(durationSeconds * 0.5);
 			}
 

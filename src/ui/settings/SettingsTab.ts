@@ -54,8 +54,8 @@ export class SettingsTab extends PluginSettingTab {
 
 		// Default presenter setting
 		new Setting(containerEl)
-			.setName("المقدم الافتراضي")
-			.setDesc("الاسم الافتراضي للمقدم عندما لا يتم تحديد أحد")
+			.setName("الملقي الافتراضي")
+			.setDesc("الاسم الافتراضي للملقي عندما لا يتم تحديد أحد")
 			.addText((text) =>
 				text
 					.setPlaceholder("غير معروف")

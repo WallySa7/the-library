@@ -43,6 +43,71 @@ export const VIEW_MODE = {
 };
 
 /**
+ * Status values for content viewing progress
+ */
+export const STATUS = {
+	/** Watched */
+	WATCHED: "تمت المشاهدة",
+	/** In progress */
+	IN_PROGRESS: "قيد المشاهدة",
+	/** Not watched */
+	NOT_WATCHED: "لم يشاهد",
+	/** In queue */
+	IN_QUEUE: "في قائمة الانتظار",
+};
+
+/**
+ * Default status values array
+ */
+export const DEFAULT_STATUS_OPTIONS = [
+	STATUS.IN_QUEUE,
+	STATUS.WATCHED,
+	STATUS.IN_PROGRESS,
+	STATUS.NOT_WATCHED,
+];
+
+/**
+ * Default status
+ */
+export const DEFAULT_STATUS = STATUS.NOT_WATCHED;
+
+/**
+ * Frontmatter field names for videos
+ */
+export const FRONTMATTER = {
+	/** Type (video/playlist) */
+	TYPE: "النوع",
+	/** Presenter name */
+	PRESENTER: "الملقي",
+	/** Duration */
+	DURATION: "المدة",
+	/** Date added */
+	DATE_ADDED: "تاريخ الإضافة",
+	/** URL */
+	URL: "رابط",
+	/** Video ID */
+	VIDEO_ID: "معرف المقطع",
+	/** Tags */
+	TAGS: "الوسوم",
+	/** Thumbnail */
+	THUMBNAIL: "الصورة المصغرة",
+	/** Categories */
+	CATEGORIES: "التصنيفات",
+	/** Status */
+	STATUS: "الحالة",
+	/** Title */
+	TITLE: "title",
+	/** Playlist URL */
+	PLAYLIST_URL: "رابط السلسلة",
+	/** Playlist ID */
+	PLAYLIST_ID: "معرف السلسلة",
+	/** Item count */
+	ITEM_COUNT: "عدد المقاطع",
+	/** Total duration */
+	TOTAL_DURATION: "المدة الإجمالية",
+};
+
+/**
  * Default page size options for pagination
  */
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];

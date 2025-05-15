@@ -8,7 +8,7 @@ import { PlaceholderDoc } from "../uiTypes";
  */
 export const VIDEO_PLACEHOLDERS: PlaceholderDoc[] = [
 	{ placeholder: "{{type}}", description: "نوع المحتوى (مقطع/سلسلة)" },
-	{ placeholder: "{{presenter}}", description: "اسم المقدم" },
+	{ placeholder: "{{presenter}}", description: "اسم الملقي" },
 	{ placeholder: "{{duration}}", description: "مدة المقطع (HH:MM:SS)" },
 	{ placeholder: "{{date}}", description: "تاريخ الإضافة" },
 	{ placeholder: "{{url}}", description: "رابط يوتيوب" },
@@ -26,7 +26,7 @@ export const VIDEO_PLACEHOLDERS: PlaceholderDoc[] = [
  */
 export const PLAYLIST_PLACEHOLDERS: PlaceholderDoc[] = [
 	{ placeholder: "{{type}}", description: "نوع المحتوى (سلسلة)" },
-	{ placeholder: "{{presenter}}", description: "اسم المقدم" },
+	{ placeholder: "{{presenter}}", description: "اسم الملقي" },
 	{ placeholder: "{{itemCount}}", description: "عدد المقاطع في السلسلة" },
 	{ placeholder: "{{duration}}", description: "المدة الإجمالية (HH:MM:SS)" },
 	{ placeholder: "{{url}}", description: "رابط السلسلة" },
@@ -44,7 +44,7 @@ export const PLAYLIST_PLACEHOLDERS: PlaceholderDoc[] = [
  */
 export const FOLDER_PLACEHOLDERS: PlaceholderDoc[] = [
 	{ placeholder: "{{type}}", description: "نوع المحتوى (مقطع/سلسلة)" },
-	{ placeholder: "{{presenter}}", description: "اسم المقدم" },
+	{ placeholder: "{{presenter}}", description: "اسم الملقي" },
 	{ placeholder: "{{date}}", description: "تاريخ الإضافة (YYYY-MM-DD)" },
 	{ placeholder: "{{year}}", description: "السنة فقط" },
 	{ placeholder: "{{month}}", description: "الشهر فقط" },

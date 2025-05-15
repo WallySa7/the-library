@@ -21,7 +21,7 @@ import {
 	ImportResult,
 	ExportOptions,
 } from "../core";
-import { CONTENT_TYPE } from "../core/constants";
+import { CONTENT_TYPE, FRONTMATTER } from "../core/constants";
 import { sanitizeFileName, formatDate, renderTemplate } from "../utils";
 
 /**
@@ -77,25 +77,30 @@ export class DataService extends BaseDataService {
 				if (!frontmatter) continue;
 
 				// Common properties
-				const fileType = frontmatter["النوع"]; // Type property in Arabic
+				const fileType = frontmatter[FRONTMATTER.TYPE]; // Type property in Arabic
 				const presenter =
-					frontmatter["المقدم"] || this.settings.defaultPresenter;
-				const title = frontmatter["title"] || file.basename;
+					frontmatter[FRONTMATTER.PRESENTER] ||
+					this.settings.defaultPresenter;
+				const title = frontmatter[FRONTMATTER.TITLE] || file.basename;
 				const url =
-					frontmatter["رابط"] || frontmatter["رابط السلسلة"] || "";
+					frontmatter[FRONTMATTER.URL] ||
+					frontmatter[FRONTMATTER.PLAYLIST_URL] ||
+					"";
 				const status =
-					frontmatter["الحالة"] ||
+					frontmatter[FRONTMATTER.STATUS] ||
 					this.settings.progressTracking.defaultStatus;
 				const dateAdded =
-					frontmatter["تاريخ الإضافة"] ||
+					frontmatter[FRONTMATTER.DATE_ADDED] ||
 					formatDate(
 						new Date(file.stat.ctime),
 						this.settings.dateFormat
 					);
 
 				// Process categories and tags
-				const categories = this.normalizeTags(frontmatter["التصنيفات"]);
-				const tags = this.normalizeTags(frontmatter["الوسوم"]);
+				const categories = this.normalizeTags(
+					frontmatter[FRONTMATTER.CATEGORIES]
+				);
+				const tags = this.normalizeTags(frontmatter[FRONTMATTER.TAGS]);
 
 				// Track unique values for collections
 				presenterSet.add(presenter);
@@ -104,11 +109,14 @@ export class DataService extends BaseDataService {
 
 				// Process as playlist/series
 				if (fileType === "سلسلة") {
-					const playlistId = frontmatter["معرف السلسلة"] || "";
-					const itemCount = parseInt(frontmatter["عدد المقاطع"]) || 0;
+					const playlistId =
+						frontmatter[FRONTMATTER.PLAYLIST_ID] || "";
+					const itemCount =
+						parseInt(frontmatter[FRONTMATTER.ITEM_COUNT]) || 0;
 					const duration =
-						frontmatter["المدة الإجمالية"] || "00:00:00";
-					const thumbnailUrl = frontmatter["الصورة المصغرة"] || "";
+						frontmatter[FRONTMATTER.TOTAL_DURATION] || "00:00:00";
+					const thumbnailUrl =
+						frontmatter[FRONTMATTER.THUMBNAIL] || "";
 
 					items.push({
 						title,
@@ -128,9 +136,11 @@ export class DataService extends BaseDataService {
 				}
 				// Process as regular video
 				else {
-					const videoId = frontmatter["معرف المقطع"] || "";
-					const duration = frontmatter["المدة"] || "00:00:00";
-					const thumbnailUrl = frontmatter["الصورة المصغرة"] || "";
+					const videoId = frontmatter[FRONTMATTER.VIDEO_ID] || "";
+					const duration =
+						frontmatter[FRONTMATTER.DURATION] || "00:00:00";
+					const thumbnailUrl =
+						frontmatter[FRONTMATTER.THUMBNAIL] || "";
 
 					// Parse duration to seconds
 					const [h = 0, m = 0, s = 0] = duration
@@ -386,7 +396,7 @@ export class DataService extends BaseDataService {
 			// Update the status in frontmatter using our helper
 			const updatedContent = this.updateFrontmatter(
 				content,
-				"الحالة",
+				FRONTMATTER.STATUS,
 				newStatus
 			);
 
@@ -420,7 +430,7 @@ export class DataService extends BaseDataService {
 			// Update tags in frontmatter using our helper
 			const updatedContent = this.updateFrontmatter(
 				content,
-				"الوسوم",
+				FRONTMATTER.TAGS,
 				tagsValue
 			);
 
@@ -457,7 +467,7 @@ export class DataService extends BaseDataService {
 			// Update categories in frontmatter using our helper
 			const updatedContent = this.updateFrontmatter(
 				content,
-				"التصنيفات",
+				FRONTMATTER.CATEGORIES,
 				categoriesValue
 			);
 
@@ -529,7 +539,7 @@ export class DataService extends BaseDataService {
 							const content = await this.app.vault.read(file);
 							const frontmatter = this.parseFrontmatter(content);
 							const currentTags = this.normalizeTags(
-								frontmatter?.["الوسوم"]
+								frontmatter?.[FRONTMATTER.TAGS]
 							);
 
 							if (!currentTags.includes(operation.value)) {
@@ -553,7 +563,7 @@ export class DataService extends BaseDataService {
 							const content = await this.app.vault.read(file);
 							const frontmatter = this.parseFrontmatter(content);
 							const currentCategories = this.normalizeTags(
-								frontmatter?.["التصنيفات"]
+								frontmatter?.[FRONTMATTER.CATEGORIES]
 							);
 
 							if (!currentCategories.includes(operation.value)) {
@@ -646,10 +656,13 @@ export class DataService extends BaseDataService {
 				const frontmatter = this.parseFrontmatter(content);
 
 				let updatedCategories: string[];
-				if (mode === "append" && frontmatter?.["التصنيفات"]) {
+				if (
+					mode === "append" &&
+					frontmatter?.[FRONTMATTER.CATEGORIES]
+				) {
 					// Get current categories and add new ones without duplicates
 					const currentCategories = this.normalizeTags(
-						frontmatter["التصنيفات"]
+						frontmatter[FRONTMATTER.CATEGORIES]
 					);
 					updatedCategories = [
 						...new Set([...currentCategories, ...categories]),
@@ -1014,7 +1027,7 @@ export class DataService extends BaseDataService {
 
 		// Create CSV header
 		const header =
-			"العنوان,المقدم,النوع,الحالة,المدة,رابط,تاريخ الإضافة,الوسوم,التصنيفات\n";
+			"العنوان,الملقي,النوع,الحالة,المدة,رابط,تاريخ الإضافة,الوسوم,التصنيفات\n";
 
 		// Helper function to prepare CSV fields
 		const escapeField = (value: any): string => {

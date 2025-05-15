@@ -4,7 +4,7 @@
 import { Menu, Notice, setIcon, TFile } from "obsidian";
 import { ContentComponentProps } from "../../core/uiTypes";
 import { SelectionState } from "../../core/state/SelectionState";
-import { CONTENT_TYPE } from "../../core/constants";
+import { CONTENT_TYPE, FRONTMATTER } from "../../core/constants";
 
 /**
  * Props for BulkActions component
@@ -90,7 +90,7 @@ export class BulkActions {
 		// Tags button
 		const bulkTagButton = container.createEl("button", {
 			cls: "library-bulk-action-btn",
-			text: "إضافة وسم",
+			text: "تعديل الوسوم",
 		});
 
 		bulkTagButton.addEventListener("click", () => {
@@ -479,11 +479,11 @@ export class BulkActions {
 						this.props.plugin.dataService.parseFrontmatter(content);
 
 					let updatedTags: string[];
-					if (mode === "append" && frontmatter?.["الوسوم"]) {
+					if (mode === "append" && frontmatter?.[FRONTMATTER.TAGS]) {
 						// Get current tags and add new ones without duplicates
 						const currentTags =
 							this.props.plugin.dataService.normalizeTags(
-								frontmatter["الوسوم"]
+								frontmatter[FRONTMATTER.TAGS]
 							);
 						updatedTags = [...new Set([...currentTags, ...tags])];
 					} else {

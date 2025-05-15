@@ -112,7 +112,7 @@ export class FilterBar {
 		// Presenter filter
 		this.createMultiSelectFilter(
 			filterBar,
-			"المقدم",
+			"الملقي",
 			"presenter",
 			this.props.presenters || [],
 			filterState.presenters
@@ -804,7 +804,7 @@ export class FilterBar {
 
 		// Presenter filters
 		filterState.presenters.forEach((presenter: string) => {
-			this.createFilterBadge(filtersList, "المقدم", presenter, () => {
+			this.createFilterBadge(filtersList, "الملقي", presenter, () => {
 				const updatedPresenters = filterState.presenters.filter(
 					(p: string) => p !== presenter
 				);

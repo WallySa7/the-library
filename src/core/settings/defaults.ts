@@ -8,6 +8,11 @@ import {
 	TemplateSettings,
 } from "./types";
 import { TableColumnConfig } from "../uiTypes";
+import {
+	DEFAULT_STATUS,
+	DEFAULT_STATUS_OPTIONS,
+	FRONTMATTER,
+} from "../constants";
 
 /**
  * Default table columns for videos
@@ -25,7 +30,7 @@ export const DEFAULT_VIDEO_COLUMNS: TableColumnConfig[] = [
 		id: "presenter",
 		enabled: true,
 		order: 2,
-		label: "المقدم",
+		label: "الملقي",
 		sortKey: "presenter",
 	},
 	{ id: "type", enabled: true, order: 3, label: "النوع", sortKey: "type" },
@@ -59,13 +64,8 @@ export const DEFAULT_VIDEO_COLUMNS: TableColumnConfig[] = [
  * Default progress tracking settings
  */
 export const DEFAULT_PROGRESS_TRACKING: ProgressTrackingSettings = {
-	defaultStatus: "لم يشاهد",
-	statusOptions: [
-		"في قائمة الانتظار",
-		"تمت المشاهدة",
-		"قيد المشاهدة",
-		"لم يشاهد",
-	],
+	defaultStatus: DEFAULT_STATUS,
+	statusOptions: DEFAULT_STATUS_OPTIONS,
 };
 
 /**
@@ -82,16 +82,16 @@ export const DEFAULT_FOLDER_RULES: FolderRulesSettings = {
  * Default video template
  */
 export const DEFAULT_VIDEO_TEMPLATE = `---
-النوع: {{type}}
-المقدم: {{presenter}}
-المدة: {{duration}}
-تاريخ الإضافة: {{date}}
-رابط: {{url}}
-معرف المقطع: {{videoId}}
-الوسوم: {{tags}}
-الصورة المصغرة: {{thumbnailUrl}}
-التصنيفات: {{categories}}
-الحالة: {{status}}
+${FRONTMATTER.TYPE}: {{type}}
+${FRONTMATTER.PRESENTER}: {{presenter}}
+${FRONTMATTER.DURATION}: {{duration}}
+${FRONTMATTER.DATE_ADDED}: {{date}}
+${FRONTMATTER.URL}: {{url}}
+${FRONTMATTER.VIDEO_ID}: {{videoId}}
+${FRONTMATTER.TAGS}: {{tags}}
+${FRONTMATTER.THUMBNAIL}: {{thumbnailUrl}}
+${FRONTMATTER.CATEGORIES}: {{categories}}
+${FRONTMATTER.STATUS}: {{status}}
 ---
 
 # {{title}}
@@ -101,7 +101,7 @@ export const DEFAULT_VIDEO_TEMPLATE = `---
 ## تفاصيل المقطع
 - **المدة:** {{duration}}
 - **النوع:** {{type}}
-- **المقدم:** {{presenter}}
+- **الملقي:** {{presenter}}
 - **الحالة:** {{status}}
 
 [مشاهدة على يوتيوب]({{url}})`;
@@ -111,22 +111,22 @@ export const DEFAULT_VIDEO_TEMPLATE = `---
  */
 export const DEFAULT_PLAYLIST_TEMPLATE = `---
 title: "{{title}}"
-رابط السلسلة: "{{url}}"
-معرف السلسلة: "{{playlistId}}"
-المقدم: "{{presenter}}"
-النوع: "{{type}}"
-عدد المقاطع: {{itemCount}}
-المدة الإجمالية: "{{duration}}"
-الحالة: "{{status}}"
-تاريخ الإضافة: "{{dateAdded}}"
-التصنيفات: {{categories}}
-الصورة المصغرة: "{{thumbnailUrl}}"
-الوسوم: {{tags}}
+${FRONTMATTER.PLAYLIST_URL}: "{{url}}"
+${FRONTMATTER.PLAYLIST_ID}: "{{playlistId}}"
+${FRONTMATTER.PRESENTER}: "{{presenter}}"
+${FRONTMATTER.TYPE}: "{{type}}"
+${FRONTMATTER.ITEM_COUNT}: {{itemCount}}
+${FRONTMATTER.TOTAL_DURATION}: "{{duration}}"
+${FRONTMATTER.STATUS}: "{{status}}"
+${FRONTMATTER.DATE_ADDED}: "{{dateAdded}}"
+${FRONTMATTER.CATEGORIES}: {{categories}}
+${FRONTMATTER.THUMBNAIL}: "{{thumbnailUrl}}"
+${FRONTMATTER.TAGS}: {{tags}}
 ---
 
 # {{title}}
 
-- **المقدم**: {{presenter}}
+- **الملقي**: {{presenter}}
 - **عدد المقاطع**: {{itemCount}}
 - **المدة الإجمالية**: {{duration}}
 - **الحالة**: {{status}}

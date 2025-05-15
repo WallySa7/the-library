@@ -134,10 +134,10 @@ export class VideoModal extends BaseModal {
 		});
 
 		// Presenter input with autocomplete
-		this.createFormField(form, "اسم المقدم", () => {
+		this.createFormField(form, "اسم الملقي", () => {
 			const container = form.createEl("div");
 			this.presenterInput = new TextComponent(container);
-			this.presenterInput.setPlaceholder("اسم المقدم أو المحاضر");
+			this.presenterInput.setPlaceholder("اسم الملقي أو المحاضر");
 			this.presenterInput.inputEl.addClass("library-input");
 
 			const datalist = container.createEl("datalist");
