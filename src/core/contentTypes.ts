@@ -185,6 +185,9 @@ export interface FolderData {
 
 	/** Formatted date */
 	date?: string;
+
+	/** First category (if available) */
+	category?: string;
 }
 
 /**

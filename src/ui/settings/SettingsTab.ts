@@ -176,81 +176,81 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
-		// Folder structure template
-		const folderStructure = new Setting(containerEl)
+		// Folder structure template with live preview
+		const folderSetting = new Setting(containerEl)
 			.setName("هيكل المجلدات")
-			.setDesc("حدد هيكل المجلدات باستخدام المتغيرات المتاحة")
-			.addText((text) =>
-				text
-					.setValue(this.plugin.settings.folderRules.structure)
-					.setPlaceholder("{{type}}/{{presenter}}")
-					.onChange(async (value) => {
-						this.plugin.settings.folderRules.structure = value;
-						await this.plugin.saveSettings();
-						this.updateFolderExample();
-					})
-			);
+			.setDesc("حدد هيكل المجلدات باستخدام المتغيرات المتاحة");
 
-		// Add folder example display
-		if (this.plugin.settings.folderRules.showExamples) {
-			const exampleEl = folderStructure.descEl.createDiv({
-				cls: "library-example-text",
+		// Create the example element first so we can reference it
+		let exampleElement: HTMLElement | null = null;
+
+		const exampleContainer = folderSetting.descEl.createDiv({
+			cls: "library-example-text",
+		});
+
+		// exampleContainer.createEl("span", { text: "مثال: " });
+
+		// Create the example element
+		exampleElement = exampleContainer.createEl("code");
+		exampleElement.textContent = getFolderExample(
+			this.plugin.settings.folderRules.structure
+		);
+
+		// Now add the text input with the live update function
+		folderSetting.addText((text) => {
+			const input = text
+				.setValue(this.plugin.settings.folderRules.structure)
+				.setPlaceholder("{{type}}/{{presenter}}");
+
+			// Create the live update handler
+			const updatePreview = () => {
+				// Only update if examples are enabled and element exists
+				if (exampleElement) {
+					const currentValue = input.inputEl.value;
+					exampleElement.textContent = getFolderExample(currentValue);
+				}
+			};
+
+			// Add input event for live updates as you type
+			input.inputEl.addEventListener("input", updatePreview);
+
+			// Also handle onChange for saving
+			input.onChange(async (value) => {
+				this.plugin.settings.folderRules.structure = value;
+				await this.plugin.saveSettings();
+				// Also update preview when saved
+				updatePreview();
 			});
 
-			exampleEl.createEl("span", { text: "مثال: " });
-
-			const exampleText = exampleEl.createEl("code");
-			exampleText.textContent = getFolderExample(
-				this.plugin.settings.folderRules.structure
-			);
-
-			// Store reference for updating later
-			(folderStructure as any).exampleEl = exampleText;
-		}
-
-		// Show examples setting
-		new Setting(containerEl)
-			.setName("عرض الأمثلة")
-			.setDesc("عرض أمثلة على هيكل المجلدات")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.folderRules.showExamples)
-					.onChange(async (value) => {
-						this.plugin.settings.folderRules.showExamples = value;
-						await this.plugin.saveSettings();
-						// Reload to apply the change
-						this.display();
-					})
-			);
+			return input;
+		});
 
 		// Folder variables documentation
-		if (this.plugin.settings.folderRules.showExamples) {
-			const folderVariables = containerEl.createEl("div", {
-				cls: "library-placeholders",
-			});
+		const folderVariables = containerEl.createEl("div", {
+			cls: "library-placeholders",
+		});
 
-			folderVariables.createEl("h3", {
-				text: "المتغيرات المتاحة:",
-			});
+		folderVariables.createEl("h3", {
+			text: "المتغيرات المتاحة:",
+		});
 
-			const table = folderVariables.createEl("table", {
-				cls: "library-placeholders-table",
-			});
+		const table = folderVariables.createEl("table", {
+			cls: "library-placeholders-table",
+		});
 
-			const thead = table.createEl("thead");
-			const headerRow = thead.createEl("tr");
-			headerRow.createEl("th", { text: "المتغير" });
-			headerRow.createEl("th", { text: "الوصف" });
+		const thead = table.createEl("thead");
+		const headerRow = thead.createEl("tr");
+		headerRow.createEl("th", { text: "المتغير" });
+		headerRow.createEl("th", { text: "الوصف" });
 
-			const tbody = table.createEl("tbody");
+		const tbody = table.createEl("tbody");
 
-			const folderPlaceholders = PLACEHOLDER_DOCS["folder"] || [];
-			folderPlaceholders.forEach((placeholder) => {
-				const row = tbody.createEl("tr");
-				row.createEl("td", { text: placeholder.placeholder });
-				row.createEl("td", { text: placeholder.description });
-			});
-		}
+		const folderPlaceholders = PLACEHOLDER_DOCS["folder"] || [];
+		folderPlaceholders.forEach((placeholder) => {
+			const row = tbody.createEl("tr");
+			row.createEl("td", { text: placeholder.placeholder });
+			row.createEl("td", { text: placeholder.description });
+		});
 	}
 
 	/**
@@ -258,18 +258,30 @@ export class SettingsTab extends PluginSettingTab {
 	 */
 	private updateFolderExample(): void {
 		const folderStructure = this.plugin.settings.folderRules.structure;
-		// Find the setting with the example (this is a bit hacky, but works)
+
+		// More reliable method to find example element using stored reference
 		const settingsEls = Array.from(
 			document.querySelectorAll(".library-settings .setting")
 		);
 
+		// First try using the saved reference
 		for (const settingEl of settingsEls) {
+			// Check for the reference we stored
+			if ((settingEl as any).__example) {
+				(settingEl as any).__example.textContent =
+					getFolderExample(folderStructure);
+				return;
+			}
+
+			// Fallback to searching for the element
 			const exampleEl = settingEl.querySelector(
 				".library-example-text code"
 			);
 			if (exampleEl) {
 				exampleEl.textContent = getFolderExample(folderStructure);
-				break;
+				// Store reference for future updates
+				(settingEl as any).__example = exampleEl;
+				return;
 			}
 		}
 	}

@@ -26,9 +26,6 @@ export interface FolderRulesSettings {
 
 	/** Default folder structure pattern to fall back to */
 	defaultStructure: string;
-
-	/** Whether to show example previews in settings */
-	showExamples: boolean;
 }
 
 /**

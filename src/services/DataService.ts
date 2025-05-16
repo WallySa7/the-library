@@ -218,11 +218,23 @@ export class DataService extends BaseDataService {
 				startDate = formattedDate;
 			}
 
+			// Process categories
+			const categories = Array.isArray(data.categories)
+				? data.categories
+				: data.categories
+				? [data.categories]
+				: [];
+
+			// Get the first category for folder path, if available
+			const firstCategory =
+				categories.length > 0 ? categories[0] : undefined;
+
 			// Resolve folder path based on folder rules
 			const folderPath = await this.resolveFolderPath({
 				type: data.type,
 				presenter: data.presenter,
 				date: formattedDate,
+				category: firstCategory,
 			});
 
 			// Create sanitized filename
@@ -300,11 +312,23 @@ export class DataService extends BaseDataService {
 				startDate = formattedDate;
 			}
 
+			// Process categories
+			const categories = Array.isArray(data.categories)
+				? data.categories
+				: data.categories
+				? [data.categories]
+				: [];
+
+			// Get the first category for folder path, if available
+			const firstCategory =
+				categories.length > 0 ? categories[0] : undefined;
+
 			// Resolve folder path based on folder rules
 			const folderPath = await this.resolveFolderPath({
 				type: data.type,
 				presenter: data.presenter,
 				date: formattedDate,
+				category: firstCategory,
 			});
 
 			// Create sanitized filename
@@ -365,13 +389,16 @@ export class DataService extends BaseDataService {
 		}
 
 		const dateObj = data.date ? new Date(data.date) : new Date();
+
+		// Prepare replacements with all possible placeholders
 		const replacements: Record<string, string> = {
-			"{{type}}": data.type,
+			"{{type}}": data.type || "مقطع", // Default to video
 			"{{presenter}}": data.presenter || this.settings.defaultPresenter,
 			"{{date}}": formatDate(dateObj, "YYYY-MM-DD"),
 			"{{year}}": dateObj.getFullYear().toString(),
 			"{{month}}": (dateObj.getMonth() + 1).toString().padStart(2, "0"),
 			"{{day}}": dateObj.getDate().toString().padStart(2, "0"),
+			"{{category}}": data.category || "عام", // Default to general category
 		};
 
 		// Apply all replacements to folder structure

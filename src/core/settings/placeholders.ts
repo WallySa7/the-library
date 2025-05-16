@@ -49,6 +49,7 @@ export const PLAYLIST_PLACEHOLDERS: PlaceholderDoc[] = [
 export const FOLDER_PLACEHOLDERS: PlaceholderDoc[] = [
 	{ placeholder: "{{type}}", description: "نوع المحتوى (مقطع/سلسلة)" },
 	{ placeholder: "{{presenter}}", description: "اسم الملقي" },
+	{ placeholder: "{{category}}", description: "التصنيف الأول للمحتوى" },
 	{ placeholder: "{{date}}", description: "تاريخ الإضافة (YYYY-MM-DD)" },
 	{ placeholder: "{{year}}", description: "السنة فقط" },
 	{ placeholder: "{{month}}", description: "الشهر فقط" },
@@ -70,13 +71,47 @@ export const PLACEHOLDER_DOCS: Record<string, PlaceholderDoc[]> = {
  * @returns Example based on the pattern
  */
 export function getFolderExample(structure: string): string {
+	// Common examples to demonstrate various patterns
 	const examples: Record<string, string> = {
 		"{{type}}/{{presenter}}": "مقطع/أحمد الشقيري",
-		"{{presenter}}/{{type}}": "أحمد الشقيري/سلسلة",
-		"{{type}}/{{year}}": "سلسلة/2023",
+		"{{presenter}}/{{type}}": "أحمد الشقيري/مقطع",
+		"{{type}}/{{year}}": "مقطع/2023",
 		"{{presenter}}/{{year}}-{{month}}": "أحمد الشقيري/2023-07",
 		"{{type}}/{{presenter}}/{{date}}": "مقطع/أحمد الشقيري/2023-07-15",
+		"{{type}}/{{category}}": "مقطع/دروس",
+		"{{category}}/{{presenter}}": "دروس/أحمد الشقيري",
+		"{{category}}/{{type}}/{{presenter}}": "دروس/مقطع/أحمد الشقيري",
+		"{{type}}/{{category}}/{{presenter}}": "مقطع/دروس/أحمد الشقيري",
+		"{{year}}/{{category}}": "2023/دروس",
 	};
 
-	return examples[structure] || examples["{{type}}/{{presenter}}"];
+	// Check if the structure is in our common examples
+	if (examples[structure]) {
+		return examples[structure];
+	}
+
+	// If not found, generate a custom example
+	// This helps with any custom combination of placeholders
+	let customExample = structure;
+
+	// Make replacements with sample values
+	const replacements: Record<string, string> = {
+		"{{type}}": "مقطع",
+		"{{presenter}}": "أحمد الشقيري",
+		"{{date}}": "2023-07-15",
+		"{{year}}": "2023",
+		"{{month}}": "07",
+		"{{day}}": "15",
+		"{{category}}": "دروس",
+	};
+
+	// Replace all placeholders
+	for (const [placeholder, value] of Object.entries(replacements)) {
+		customExample = customExample.replace(
+			new RegExp(placeholder, "g"),
+			value
+		);
+	}
+
+	return customExample;
 }
