@@ -50,7 +50,6 @@
 .library-button-primary {
 	background-color: var(--primary-accent);
 	color: var(--text-on-accent);
-	border-color: var(--primary-accent);
 }
 
 .library-button-primary:hover {
@@ -524,6 +523,9 @@
 	background-color: var(--background-primary);
 	position: relative;
 	box-shadow: var(--card-shadow);
+	display: flex; /* Added to control card layout */
+	flex-direction: column; /* Added to stack children vertically */
+	height: 100%; /* Make all cards take full height of grid cell */
 }
 
 .library-card:hover {
@@ -532,9 +534,10 @@
 }
 
 .library-card-checkbox {
-	position: absolute;
+	position: absolute !important;
 	top: 12px;
-	left: 12px;
+	right: 12px; /* Changed from left to right for RTL layout */
+	left: auto; /* Reset left positioning */
 	z-index: 2;
 	width: 18px;
 	height: 18px;
@@ -547,6 +550,7 @@
 	height: 180px;
 	overflow: hidden;
 	background-color: var(--background-secondary);
+	flex-shrink: 0; /* Prevent thumbnail from shrinking */
 }
 
 .library-card-thumbnail img {
@@ -554,6 +558,7 @@
 	height: 100%;
 	object-fit: cover;
 	transition: transform 0.3s ease;
+	cursor: auto !important;
 }
 
 .library-card:hover .library-card-thumbnail img {
@@ -589,7 +594,7 @@
 
 .library-card-type {
 	top: 12px;
-	right: 12px;
+	left: 12px;
 }
 
 .library-card-duration {
@@ -599,6 +604,9 @@
 
 .library-card-content {
 	padding: 16px;
+	flex: 1; /* Allow content to grow and take available space */
+	display: flex; /* Added for better content organization */
+	flex-direction: column; /* Stack content items vertically */
 }
 
 .library-card-title {
@@ -631,7 +639,6 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 4px;
-	margin-right: 24px;
 }
 
 .library-card-tag {
@@ -648,6 +655,7 @@
 	padding: 12px 16px;
 	border-top: 1px solid var(--background-modifier-border);
 	background-color: var(--background-secondary-alt);
+	flex-shrink: 0; /* Prevent footer from shrinking */
 }
 
 .library-card-actions {
@@ -902,6 +910,13 @@
 .library-video-close-btn:hover {
 	background-color: var(--text-error);
 	transform: scale(1.1);
+}
+
+.library-buttons {
+	display: flex;
+	flex-direction: row-reverse;
+	justify-content: flex-end;
+	gap: 10px;
 }
 
 /* Dialog (Confirm, Tag Edit, etc.) */
@@ -1414,7 +1429,6 @@
 
 .library-import-buttons {
 	display: flex;
-	justify-content: flex-end;
 	gap: 12px;
 }
 
