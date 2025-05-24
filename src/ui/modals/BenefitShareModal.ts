@@ -42,6 +42,7 @@ interface DesignTemplate {
  * Field customization interface
  */
 interface FieldCustomization {
+	fontFamily: string;
 	enabled: boolean;
 	fontSize: number;
 	color: string;
@@ -328,6 +329,7 @@ export class BenefitShareModal extends Modal {
 				bold: true,
 				position: "top",
 				style: "underline",
+				fontFamily: "",
 			},
 			source: {
 				enabled: true,
@@ -336,6 +338,7 @@ export class BenefitShareModal extends Modal {
 				bold: false,
 				position: "top",
 				style: "plain",
+				fontFamily: "",
 			},
 			author: {
 				enabled: true,
@@ -344,6 +347,7 @@ export class BenefitShareModal extends Modal {
 				bold: false,
 				position: "top",
 				style: "plain",
+				fontFamily: "",
 			},
 			location: {
 				enabled: true,
@@ -352,6 +356,7 @@ export class BenefitShareModal extends Modal {
 				bold: false,
 				position: "top",
 				style: "bubble",
+				fontFamily: "",
 			},
 			content: {
 				enabled: true,
@@ -361,6 +366,7 @@ export class BenefitShareModal extends Modal {
 				position: "custom",
 				customY: 300,
 				style: "plain",
+				fontFamily: "",
 			},
 			tags: {
 				enabled: true,
@@ -369,6 +375,7 @@ export class BenefitShareModal extends Modal {
 				bold: false,
 				position: "bottom",
 				style: "bubble",
+				fontFamily: "",
 			},
 			watermark: {
 				enabled: true,
@@ -377,6 +384,7 @@ export class BenefitShareModal extends Modal {
 				bold: false,
 				position: "bottom",
 				style: "plain",
+				fontFamily: "",
 			},
 		};
 
@@ -405,14 +413,6 @@ export class BenefitShareModal extends Modal {
 		const previewSection = mainContainer.createEl("div", {
 			cls: "library-share-preview-section",
 		});
-
-		// Add resizing handle between options and preview
-		const resizeHandle = mainContainer.createEl("div", {
-			cls: "library-resize-handle",
-		});
-
-		// Make the panel resizable
-		this.setupResizeHandle(resizeHandle, optionsContainer, previewSection);
 
 		// Render options
 		this.renderOptions(optionsContainer);
@@ -490,9 +490,6 @@ export class BenefitShareModal extends Modal {
 			zoomLevel = 1;
 			this.canvas.style.transform = `scale(${zoomLevel})`;
 		});
-
-		// Add enhanced CSS styles
-		this.addEnhancedStyles();
 	}
 
 	/**
@@ -578,47 +575,6 @@ export class BenefitShareModal extends Modal {
 		} else {
 			this.patternType = "none";
 		}
-	}
-
-	/**
-	 * Set up resizable panel functionality
-	 */
-	private setupResizeHandle(
-		handle: HTMLElement,
-		leftPanel: HTMLElement,
-		rightPanel: HTMLElement
-	): void {
-		let startX: number;
-		let startWidth: number;
-
-		handle.addEventListener("mousedown", (e) => {
-			e.preventDefault();
-			startX = e.clientX;
-			startWidth = leftPanel.offsetWidth;
-			document.addEventListener("mousemove", resize);
-			document.addEventListener("mouseup", stopResize);
-		});
-
-		const resize = (e: MouseEvent) => {
-			// Calculate the new width (RTL-aware)
-			const containerWidth = leftPanel.parentElement?.offsetWidth || 0;
-			const newWidth = startWidth - (e.clientX - startX);
-
-			// Limit the min/max width (40% - 70% of the container)
-			const minWidth = containerWidth * 0.2;
-			const maxWidth = containerWidth * 0.6;
-			const clampedWidth = Math.max(
-				minWidth,
-				Math.min(maxWidth, newWidth)
-			);
-
-			leftPanel.style.width = `${clampedWidth}px`;
-		};
-
-		const stopResize = () => {
-			document.removeEventListener("mousemove", resize);
-			document.removeEventListener("mouseup", stopResize);
-		};
 	}
 
 	/**
@@ -3903,565 +3859,6 @@ export class BenefitShareModal extends Modal {
 		} catch (error) {
 			console.error("Error copying to clipboard:", error);
 			new Notice("فشل في النسخ إلى الحافظة");
-		}
-	}
-
-	/**
-	 * Adds enhanced CSS styles
-	 */
-
-	/**
-	 * Adds enhanced CSS styles
-	 */
-	private addEnhancedStyles(): void {
-		const styleId = "library-benefit-share-pro-styles";
-		if (!document.getElementById(styleId)) {
-			const style = document.createElement("style");
-			style.id = styleId;
-			style.textContent = `
-            .benefit-share-pro .library-share-main {
-                display: flex;
-                position: relative;
-                gap: 5px;
-                margin-bottom: 20px;
-                direction: rtl;
-                max-height: 70vh;
-            }
-            
-            .benefit-share-pro .library-share-options {
-                flex: 0 0 350px;
-                overflow-y: auto;
-                direction: rtl;
-                border-left: 1px solid var(--background-modifier-border);
-                padding-left: 15px;
-            }
-            
-            .benefit-share-pro .library-resize-handle {
-                width: 5px;
-                background: var(--background-modifier-border);
-                cursor: col-resize;
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                left: 350px;
-                transition: background 0.2s;
-            }
-            
-            .benefit-share-pro .library-resize-handle:hover {
-                background: var(--text-accent);
-            }
-            
-            .benefit-share-pro .library-share-preview-section {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-start;
-                align-items: center;
-                background: rgba(0, 0, 0, 0.03);
-                padding: 15px;
-                border-radius: 8px;
-                overflow: hidden;
-                position: relative;
-            }
-            
-            .benefit-share-pro .library-preview-zoom-controls {
-                position: absolute;
-                top: 10px;
-                left: 10px;
-                display: flex;
-                gap: 5px;
-                z-index: 10;
-                background: var(--background-secondary);
-                padding: 5px;
-                border-radius: 4px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            }
-            
-            .benefit-share-pro .library-zoom-btn {
-                width: 30px;
-                height: 30px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: none;
-                background: var(--background-secondary-alt);
-                border-radius: 4px;
-                cursor: pointer;
-            }
-            
-            .benefit-share-pro .library-zoom-btn:hover {
-                background: var(--interactive-hover);
-            }
-            
-            .benefit-share-pro .library-share-preview {
-                max-width: 100%;
-                max-height: calc(70vh - 30px);
-                overflow: auto;
-                display: flex;
-                justify-content: center;
-                align-items: flex-start;
-                padding: 10px;
-            }
-            
-            .benefit-share-pro .library-share-preview canvas {
-                max-width: 100%;
-                height: auto;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-                transform-origin: top center;
-                transition: transform 0.2s;
-            }
-            
-            /* Tabs styling */
-            .benefit-share-pro .share-options-tabs {
-                display: flex;
-                border-bottom: 1px solid var(--background-modifier-border);
-                margin-bottom: 16px;
-                direction: rtl;
-                flex-wrap: wrap;
-            }
-            
-            .benefit-share-pro .share-option-tab {
-                padding: 8px 12px;
-                background: transparent;
-                border: none;
-                border-bottom: 2px solid transparent;
-                margin-bottom: -1px;
-                color: var(--text-muted);
-                cursor: pointer;
-                font-weight: 500;
-                font-size: 14px;
-            }
-            
-            .benefit-share-pro .share-option-tab:hover {
-                color: var(--text-normal);
-            }
-            
-            .benefit-share-pro .share-option-tab.active {
-                color: var(--text-accent);
-                border-bottom: 2px solid var(--text-accent);
-            }
-            
-            /* Option panels */
-            .benefit-share-pro .share-option-panel {
-                display: none;
-                padding-top: 5px;
-            }
-            
-            .benefit-share-pro .share-option-panel.active {
-                display: block;
-            }
-            
-            /* Template section */
-            .benefit-share-pro .template-search-container {
-                margin-bottom: 15px;
-                position: relative;
-            }
-            
-            .benefit-share-pro .template-search-input {
-                width: 100%;
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid var(--background-modifier-border);
-                background-color: var(--background-primary);
-            }
-            
-            .benefit-share-pro .template-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
-                margin-bottom: 20px;
-                max-height: 350px;
-                overflow-y: auto;
-                padding-right: 5px;
-            }
-            
-            .benefit-share-pro .template-card {
-                border-radius: 8px;
-                overflow: hidden;
-                border: 2px solid transparent;
-                cursor: pointer;
-                transition: all 0.2s ease;
-            }
-            
-            .benefit-share-pro .template-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05);
-            }
-            
-            .benefit-share-pro .template-card.selected {
-                border-color: var(--text-accent);
-            }
-            
-            .benefit-share-pro .template-preview {
-                height: 80px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-            }
-            
-            .benefit-share-pro .template-preview-content {
-                width: 100%;
-                height: 100%;
-                padding: 10px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: flex-end;
-            }
-            
-            .benefit-share-pro .template-preview .preview-title {
-                font-weight: bold;
-                font-size: 12px;
-                margin-bottom: 5px;
-                text-align: right;
-                width: 100%;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            
-            .benefit-share-pro .template-preview .preview-text {
-                font-size: 9px;
-                opacity: 0.7;
-                text-align: right;
-                width: 100%;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            
-            .benefit-share-pro .template-preview .preview-accent {
-                position: absolute;
-                bottom: 10px;
-                right: 10px;
-                width: 30px;
-                height: 3px;
-                border-radius: 2px;
-            }
-            
-            .benefit-share-pro .template-name {
-                text-align: center;
-                padding: 8px 0;
-                background: var(--background-secondary);
-                font-size: 12px;
-            }
-            
-            /* Template color customization */
-            .benefit-share-pro .template-color-customization {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 15px;
-                margin-top: 10px;
-                margin-bottom: 15px;
-            }
-            
-            .benefit-share-pro .color-section {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-            
-            .benefit-share-pro .color-section-label {
-                font-size: 14px;
-                font-weight: 500;
-                margin-bottom: 5px;
-            }
-            
-            /* Platform buttons */
-            .benefit-share-pro .platforms-container {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
-                margin-bottom: 16px;
-            }
-            
-            .benefit-share-pro .platform-button {
-                padding: 6px 8px;
-                background: var(--background-secondary);
-                border: 1px solid var(--background-modifier-border);
-                border-radius: 4px;
-                font-size: 12px;
-                cursor: pointer;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 4px;
-            }
-            
-            .benefit-share-pro .platform-button:hover {
-                background: var(--background-modifier-hover);
-            }
-            
-            .benefit-share-pro .platform-button.active {
-                background: var(--text-accent);
-                color: var(--text-on-accent);
-                border-color: var(--text-accent);
-            }
-            
-            .benefit-share-pro .platform-button svg {
-                width: 16px;
-                height: 16px;
-            }
-            
-            /* Background options */
-            .benefit-share-pro .bg-type-selector {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 12px;
-            }
-            
-            .benefit-share-pro .bg-type-btn {
-                flex: 1;
-                padding: 6px 12px;
-                background: var(--background-secondary);
-                border: 1px solid var(--background-modifier-border);
-                border-radius: 4px;
-                font-size: 13px;
-                cursor: pointer;
-            }
-            
-            .benefit-share-pro .bg-type-btn:hover {
-                background: var(--background-modifier-hover);
-            }
-            
-            .benefit-share-pro .bg-type-btn.active {
-                background: var(--text-accent);
-                color: var(--text-on-accent);
-                border-color: var(--text-accent);
-            }
-            
-            /* Layout items */
-            .benefit-share-pro .layouts-container {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-                margin-bottom: 20px;
-            }
-            
-            .benefit-share-pro .layout-item {
-                border: 2px solid transparent;
-                border-radius: 8px;
-                overflow: hidden;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            
-            .benefit-share-pro .layout-item:hover {
-                transform: translateY(-2px);
-            }
-            
-            .benefit-share-pro .layout-item.active {
-                border-color: var(--text-accent);
-            }
-            
-            .benefit-share-pro .layout-preview {
-                height: 100px;
-                background: var(--background-secondary);
-                display: flex;
-                flex-direction: column;
-                padding: 5px;
-                position: relative;
-            }
-            
-            .benefit-share-pro .layout-name {
-                text-align: center;
-                padding: 6px 0;
-                font-size: 12px;
-                background: var(--background-secondary-alt);
-            }
-            
-            /* Layout preview elements */
-            .benefit-share-pro .layout-element {
-                background: var(--text-muted);
-                margin: 2px 0;
-                border-radius: 2px;
-            }
-            
-            .benefit-share-pro .layout-title {
-                background: var(--text-normal);
-            }
-            
-            .benefit-share-pro .layout-content {
-                background: var(--text-normal);
-            }
-            
-            .benefit-share-pro .layout-metadata, .layout-tags {
-                background: var(--text-muted);
-                opacity: 0.7;
-            }
-            
-            .benefit-share-pro .position-top {
-                align-self: flex-start;
-                width: 100%;
-            }
-            
-            .benefit-share-pro .position-top-center {
-                align-self: center;
-                width: 90%;
-            }
-            
-            .benefit-share-pro .position-top-middle {
-                align-self: flex-start;
-                width: 70%;
-                margin-right: 10px;
-            }
-            
-            .benefit-share-pro .position-center {
-                align-self: center;
-                width: 90%;
-            }
-            
-            .benefit-share-pro .position-middle {
-                align-self: flex-start;
-                width: 90%;
-                margin-right: 10px;
-            }
-            
-            .benefit-share-pro .position-bottom {
-                align-self: flex-start;
-                width: 80%;
-                margin-top: auto;
-            }
-            
-            .benefit-share-pro .position-bottom-middle {
-                align-self: center;
-                width: 60%;
-                margin-top: auto;
-            }
-            
-            .benefit-share-pro .position-top-left {
-                align-self: flex-start;
-                width: 40px;
-                height: 40px !important;
-                margin-left: auto;
-            }
-            
-            .benefit-share-pro .position-bottom-right {
-                align-self: flex-end;
-                width: 40px;
-                height: 40px !important;
-                margin-right: 10px;
-                margin-top: auto;
-            }
-            
-            /* Field accordion */
-            .benefit-share-pro .field-accordion {
-                border: 1px solid var(--background-modifier-border);
-                border-radius: 4px;
-                margin-bottom: 10px;
-                overflow: hidden;
-            }
-            
-            .benefit-share-pro .field-accordion-header {
-                display: flex;
-                align-items: center;
-                padding: 10px;
-                background: var(--background-secondary);
-                cursor: pointer;
-            }
-            
-            .benefit-share-pro .field-toggle-checkbox {
-                margin: 0 0 0 10px;
-                width: 16px;
-                height: 16px;
-            }
-            
-            .benefit-share-pro .field-accordion-title {
-                flex: 1;
-                font-weight: 500;
-            }
-            
-            .benefit-share-pro .field-accordion-toggle {
-                background: transparent;
-                border: none;
-                color: var(--text-normal);
-                cursor: pointer;
-                padding: 0;
-                display: flex;
-            }
-            
-            .benefit-share-pro .field-accordion-content {
-                padding: 10px;
-                background: var(--background-primary);
-                border-top: 1px solid var(--background-modifier-border);
-            }
-            
-            .benefit-share-pro .fields-description {
-                color: var(--text-muted);
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
-            
-            /* Sliders and inputs */
-            .benefit-share-pro .slider-label-container {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 4px;
-            }
-            
-            .benefit-share-pro .slider-value {
-                font-size: 12px;
-                opacity: 0.8;
-            }
-            
-            .benefit-share-pro .library-slider {
-                width: 100%;
-                margin: 8px 0 16px;
-            }
-            
-            .benefit-share-pro .library-color-input-container {
-                display: flex;
-                gap: 8px;
-                align-items: center;
-            }
-            
-            .benefit-share-pro .library-color-input {
-                width: 40px;
-                height: 30px;
-                padding: 0;
-                border: 1px solid var(--background-modifier-border);
-                border-radius: 4px;
-            }
-            
-            .benefit-share-pro .library-color-text {
-                flex: 1;
-            }
-            
-            /* Checkbox field */
-            .benefit-share-pro .library-checkbox-field {
-                display: flex;
-                align-items: center;
-                margin-bottom: 10px;
-                cursor: pointer;
-            }
-            
-            .benefit-share-pro .library-checkbox {
-                margin-left: 8px;
-            }
-            
-            /* Responsive adjustments */
-            @media (max-width: 768px) {
-                .benefit-share-pro .library-share-main {
-                    flex-direction: column;
-                }
-                
-                .benefit-share-pro .library-share-options {
-                    max-width: 100%;
-                    max-height: 300px;
-                }
-                
-                .benefit-share-pro .template-grid {
-                    grid-template-columns: 1fr;
-                }
-                
-                .benefit-share-pro .library-resize-handle {
-                    display: none;
-                }
-            }
-        `;
-			document.head.appendChild(style);
 		}
 	}
 

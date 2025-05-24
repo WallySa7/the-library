@@ -221,6 +221,11 @@ export const LOCAL_STORAGE_KEYS = {
 	 * Key for storing the current items per page setting
 	 */
 	ITEMS_PER_PAGE: "library-items-per-page",
+
+	/**
+	 * Key for storing benefit draft data
+	 */
+	BENEFIT_DRAFT: "library-benefit-draft",
 };
 
 /**

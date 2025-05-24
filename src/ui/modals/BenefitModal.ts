@@ -6,9 +6,27 @@ import {
 	TFile,
 	MarkdownRenderer,
 	setIcon,
+	ButtonComponent,
 } from "obsidian";
-import { BenefitData, BenefitItem } from "../../core";
+import { BenefitData, BenefitItem, LOCAL_STORAGE_KEYS } from "../../core";
 import { generateId } from "../../utils";
+
+/**
+ * Interface for benefit draft data
+ */
+interface BenefitDraft {
+	title: string;
+	text: string;
+	pageNumber?: string;
+	volumeNumber?: string;
+	timestamp?: string;
+	categories: string;
+	tags: string;
+	filePath: string;
+	benefitId?: string;
+	lastSaved: number;
+	isBook: boolean;
+}
 
 /**
  * Shortcut definition interface
@@ -80,6 +98,15 @@ export class BenefitModal extends Modal {
 	private lastChangeTime = 0;
 	private isUndoRedoAction = false;
 
+	// Draft saving
+	private draftSaveInterval: number;
+	private draftSaveIntervalMs = 5000; // Save draft every 5 seconds
+	private hasPendingChanges = false;
+	private hasLoadedDraft = false;
+	private draftBanner: HTMLElement;
+	private statusIndicator: HTMLElement;
+	private statusTimeout: number;
+
 	/**
 	 * Creates a new BenefitModal
 	 * @param app Obsidian app instance
@@ -116,6 +143,12 @@ export class BenefitModal extends Modal {
 		const isBook = this.file.path.startsWith(
 			this.plugin.settings.booksFolder
 		);
+
+		// Check for existing draft
+		const existingDraft = this.loadDraft();
+		if (existingDraft && !this.hasLoadedDraft) {
+			this.createDraftBanner(contentEl, existingDraft);
+		}
 
 		// Title field
 		const titleField = contentEl.createEl("div", { cls: "library-field" });
@@ -187,6 +220,9 @@ export class BenefitModal extends Modal {
 
 			// Update undo/redo button states
 			this.updateUndoRedoButtons();
+
+			// Mark that we have pending changes to save
+			this.hasPendingChanges = true;
 		});
 
 		// Preview container
@@ -308,6 +344,379 @@ export class BenefitModal extends Modal {
 
 		// Focus on title input
 		this.titleInput.focus();
+
+		// Setup automatic draft saving
+		this.setupDraftSaving();
+
+		// If we have a draft to load and we haven't loaded one yet, load it
+		if (existingDraft && !this.hasLoadedDraft) {
+			// We'll load it if the user clicks the restore button in the banner
+		}
+
+		// Add input event listeners for all form fields
+		this.titleInput.addEventListener("input", () => {
+			this.hasPendingChanges = true;
+		});
+
+		if (this.pageInput) {
+			this.pageInput.addEventListener("input", () => {
+				this.hasPendingChanges = true;
+			});
+		}
+
+		if (this.volumeInput) {
+			this.volumeInput.addEventListener("input", () => {
+				this.hasPendingChanges = true;
+			});
+		}
+
+		if (this.timestampInput) {
+			this.timestampInput.addEventListener("input", () => {
+				this.hasPendingChanges = true;
+			});
+		}
+
+		this.categoriesInput.addEventListener("input", () => {
+			this.hasPendingChanges = true;
+		});
+
+		this.tagsInput.addEventListener("input", () => {
+			this.hasPendingChanges = true;
+		});
+	}
+
+	/**
+	 * Creates a banner to notify about available draft
+	 */
+	private createDraftBanner(containerEl: HTMLElement, draft: BenefitDraft) {
+		// Create banner if it doesn't exist
+		if (!this.draftBanner) {
+			this.draftBanner = containerEl.createEl("div", {
+				cls: "library-draft-banner",
+			});
+
+			const draftDate = new Date(draft.lastSaved);
+			const formattedDate = draftDate.toLocaleString();
+
+			this.draftBanner.createEl("div", {
+				text: `توجد مسودة محفوظة من ${formattedDate}. هل تريد استعادتها؟`,
+				cls: "library-draft-message",
+			});
+
+			const buttonsEl = this.draftBanner.createEl("div", {
+				cls: "library-draft-buttons",
+			});
+
+			// Restore button
+			const restoreBtn = new ButtonComponent(buttonsEl)
+				.setButtonText("استعادة المسودة")
+				.setClass("library-button-primary")
+				.onClick(() => {
+					this.restoreDraft(draft);
+					this.draftBanner.remove();
+				});
+
+			restoreBtn.buttonEl.addClass("library-button");
+
+			// Discard button
+			const discardBtn = new ButtonComponent(buttonsEl)
+				.setButtonText("تجاهل")
+				.setClass("library-button")
+				.onClick(() => {
+					this.clearDraft();
+					this.draftBanner.remove();
+				});
+
+			// Add the banner to the top of the modal
+			containerEl.insertBefore(this.draftBanner, containerEl.firstChild);
+
+			// Add banner styles
+			this.addDraftBannerStyles();
+		}
+	}
+
+	/**
+	 * Add CSS styles for the draft banner
+	 */
+	private addDraftBannerStyles() {
+		// Add styles if they don't already exist
+		const styleId = "library-draft-banner-styles";
+		if (!document.getElementById(styleId)) {
+			const style = document.createElement("style");
+			style.id = styleId;
+			style.textContent = `
+				.library-draft-banner {
+					background-color: var(--background-secondary);
+					border-radius: 4px;
+					padding: 12px;
+					margin-bottom: 16px;
+					display: flex;
+					flex-direction: column;
+					gap: 8px;
+				}
+				
+				.library-draft-message {
+					color: var(--text-normal);
+					font-weight: 500;
+				}
+				
+				.library-draft-buttons {
+					display: flex;
+					gap: 8px;
+					justify-content: flex-end;
+				}
+				
+				.library-button {
+					padding: 6px 12px;
+					border-radius: 4px;
+					border: 1px solid var(--background-modifier-border);
+					background-color: var(--background-secondary-alt);
+					color: var(--text-normal);
+					cursor: pointer;
+					font-size: 14px;
+				}
+				
+				.library-button:hover {
+					background-color: var(--background-modifier-hover);
+				}
+				
+				.library-button-primary {
+					background-color: var(--interactive-accent);
+					color: var(--text-on-accent);
+					border-color: var(--interactive-accent);
+				}
+				
+				.library-button-primary:hover {
+					background-color: var(--interactive-accent-hover);
+				}
+			`;
+			document.head.appendChild(style);
+		}
+	}
+
+	/**
+	 * Sets up automatic draft saving
+	 */
+	private setupDraftSaving() {
+		// Add status indicator to the modal
+		this.createStatusIndicator();
+
+		// Clear any existing interval
+		if (this.draftSaveInterval) {
+			window.clearInterval(this.draftSaveInterval);
+		}
+
+		// Set up new interval
+		this.draftSaveInterval = window.setInterval(() => {
+			if (this.hasPendingChanges) {
+				this.saveDraft();
+				this.hasPendingChanges = false;
+				this.showStatusMessage("تم حفظ المسودة");
+			}
+		}, this.draftSaveIntervalMs);
+	}
+
+	/**
+	 * Creates a status indicator element
+	 */
+	private createStatusIndicator() {
+		if (!this.statusIndicator) {
+			const footer = this.contentEl.createEl("div", {
+				cls: "library-benefit-status-footer",
+			});
+
+			this.statusIndicator = footer.createEl("div", {
+				cls: "library-benefit-status-message",
+			});
+
+			// Add styles for the status indicator
+			this.addStatusStyles();
+		}
+	}
+
+	/**
+	 * Shows a temporary status message
+	 */
+	private showStatusMessage(message: string, duration: number = 2000) {
+		if (!this.statusIndicator) return;
+
+		// Clear any existing timeout
+		if (this.statusTimeout) {
+			clearTimeout(this.statusTimeout);
+		}
+
+		// Show the message
+		this.statusIndicator.setText(message);
+		this.statusIndicator.addClass("visible");
+
+		// Hide after duration
+		this.statusTimeout = window.setTimeout(() => {
+			this.statusIndicator.removeClass("visible");
+		}, duration);
+	}
+
+	/**
+	 * Add CSS styles for the status indicator
+	 */
+	private addStatusStyles() {
+		// Add styles if they don't already exist
+		const styleId = "library-benefit-status-styles";
+		if (!document.getElementById(styleId)) {
+			const style = document.createElement("style");
+			style.id = styleId;
+			style.textContent = `
+				.library-benefit-status-footer {
+					position: absolute;
+					bottom: 0;
+					left: 0;
+					right: 0;
+					padding: 8px 16px;
+					text-align: left;
+					pointer-events: none;
+				}
+				
+				.library-benefit-status-message {
+					display: inline-block;
+					padding: 4px 8px;
+					border-radius: 4px;
+					background-color: var(--background-secondary);
+					color: var(--text-muted);
+					font-size: 12px;
+					opacity: 0;
+					transition: opacity 0.2s ease;
+				}
+				
+				.library-benefit-status-message.visible {
+					opacity: 1;
+				}
+			`;
+			document.head.appendChild(style);
+		}
+	}
+
+	/**
+	 * Saves the current state as a draft
+	 */
+	private saveDraft() {
+		try {
+			const isBook = this.file.path.startsWith(
+				this.plugin.settings.booksFolder
+			);
+			const draft: BenefitDraft = {
+				title: this.titleInput.value,
+				text: this.textArea.getValue(),
+				categories: this.categoriesInput.value,
+				tags: this.tagsInput.value,
+				filePath: this.file.path,
+				lastSaved: Date.now(),
+				isBook: isBook,
+			};
+
+			// Add content type specific fields
+			if (isBook) {
+				if (this.pageInput?.value) {
+					draft.pageNumber = this.pageInput.value;
+				}
+				if (this.volumeInput?.value) {
+					draft.volumeNumber = this.volumeInput.value;
+				}
+			} else {
+				if (this.timestampInput?.value) {
+					draft.timestamp = this.timestampInput.value;
+				}
+			}
+
+			// Add benefit ID if editing an existing benefit
+			if (this.benefit?.id) {
+				draft.benefitId = this.benefit.id;
+			}
+
+			// Save to localStorage
+			localStorage.setItem(
+				LOCAL_STORAGE_KEYS.BENEFIT_DRAFT,
+				JSON.stringify(draft)
+			);
+		} catch (error) {
+			console.error("Error saving benefit draft:", error);
+		}
+	}
+
+	/**
+	 * Loads a saved draft if available
+	 * @returns The loaded draft or null if none exists
+	 */
+	private loadDraft(): BenefitDraft | null {
+		try {
+			const draftJson = localStorage.getItem(
+				LOCAL_STORAGE_KEYS.BENEFIT_DRAFT
+			);
+			if (!draftJson) return null;
+
+			const draft: BenefitDraft = JSON.parse(draftJson);
+
+			// Check if the draft is for the current file and benefit (if editing)
+			if (draft.filePath !== this.file.path) return null;
+
+			// If editing a benefit, check if the draft is for this benefit
+			if (this.benefit?.id && draft.benefitId !== this.benefit.id)
+				return null;
+
+			// Check if it's the same content type (book/video)
+			const isCurrentBook = this.file.path.startsWith(
+				this.plugin.settings.booksFolder
+			);
+			if (draft.isBook !== isCurrentBook) return null;
+
+			return draft;
+		} catch (error) {
+			console.error("Error loading benefit draft:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Restores form values from a saved draft
+	 */
+	private restoreDraft(draft: BenefitDraft) {
+		// Restore title and main text
+		this.titleInput.value = draft.title || "";
+		this.textArea.setValue(draft.text || "");
+
+		// Restore categories and tags
+		this.categoriesInput.value = draft.categories || "";
+		this.tagsInput.value = draft.tags || "";
+
+		// Restore content type specific fields
+		if (draft.isBook) {
+			if (this.pageInput && draft.pageNumber) {
+				this.pageInput.value = draft.pageNumber;
+			}
+			if (this.volumeInput && draft.volumeNumber) {
+				this.volumeInput.value = draft.volumeNumber;
+			}
+		} else {
+			if (this.timestampInput && draft.timestamp) {
+				this.timestampInput.value = draft.timestamp;
+			}
+		}
+
+		// Reset history with restored text
+		this.history = [];
+		this.historyIndex = -1;
+		this.pushHistory();
+		this.updateUndoRedoButtons();
+
+		// Mark as loaded so we don't show the banner again
+		this.hasLoadedDraft = true;
+
+		new Notice("تم استعادة المسودة بنجاح");
+	}
+
+	/**
+	 * Clears any saved draft
+	 */
+	private clearDraft() {
+		localStorage.removeItem(LOCAL_STORAGE_KEYS.BENEFIT_DRAFT);
 	}
 
 	/**
@@ -996,6 +1405,9 @@ export class BenefitModal extends Modal {
 						this.insertAtCursor("    ");
 					}
 				}
+
+				// Mark that we have pending changes
+				this.hasPendingChanges = true;
 			}
 		);
 	}
@@ -1421,6 +1833,10 @@ export class BenefitModal extends Modal {
 
 		try {
 			await this.onSave(benefitData);
+
+			// Clear draft after successful save
+			this.clearDraft();
+
 			this.close();
 		} catch (error) {
 			console.error("Error saving benefit:", error);
@@ -1429,6 +1845,21 @@ export class BenefitModal extends Modal {
 	}
 
 	onClose() {
+		// Clear the automatic save interval
+		if (this.draftSaveInterval) {
+			window.clearInterval(this.draftSaveInterval);
+		}
+
+		// Clear any existing status timeout
+		if (this.statusTimeout) {
+			clearTimeout(this.statusTimeout);
+		}
+
+		// Save draft on close if we have pending changes
+		if (this.hasPendingChanges) {
+			this.saveDraft();
+		}
+
 		const { contentEl } = this;
 		contentEl.empty();
 	}
