@@ -366,6 +366,7 @@ export class BenefitsView {
 			this.filterState.searchQuery = "";
 			this.searchInput!.value = "";
 			this.updateFilters();
+			updateClearButton();
 		});
 
 		// Show/hide clear button based on search input
