@@ -63,6 +63,14 @@ interface HistoryState {
 }
 
 /**
+ * Suggestion item interface
+ */
+interface SuggestionItem {
+	value: string;
+	count: number; // How many times this tag/category is used
+}
+
+/**
  * Modal for adding/editing benefits with rich text toolbar
  */
 export class BenefitModal extends Modal {
@@ -79,6 +87,13 @@ export class BenefitModal extends Modal {
 	private timestampInput: HTMLInputElement;
 	private categoriesInput: HTMLInputElement;
 	private tagsInput: HTMLInputElement;
+
+	// Suggestion elements
+	private categoriesSuggestionsEl: HTMLElement;
+	private tagsSuggestionsEl: HTMLElement;
+	private activeSuggestionIndex = -1;
+	private currentSuggestions: SuggestionItem[] = [];
+	private currentInputEl: HTMLInputElement | null = null;
 
 	// Preview element
 	private previewEl: HTMLElement;
@@ -286,32 +301,52 @@ export class BenefitModal extends Modal {
 			});
 		}
 
-		// Categories field
+		// Categories field with suggestions
 		const categoriesField = contentEl.createEl("div", {
-			cls: "library-field",
+			cls: "library-field library-field-with-suggestions",
 		});
 		categoriesField.createEl("label", {
 			text: "التصنيفات",
 			cls: "library-label",
 		});
-		this.categoriesInput = categoriesField.createEl("input", {
+
+		const categoriesContainer = categoriesField.createEl("div", {
+			cls: "library-input-container",
+		});
+
+		this.categoriesInput = categoriesContainer.createEl("input", {
 			type: "text",
-			cls: "library-input",
+			cls: "library-input library-input-with-suggestions",
 			placeholder: "فصل بفاصلة (،)",
 			value: this.benefit?.categories?.join("، ") || "",
 		});
 
-		// Tags field
-		const tagsField = contentEl.createEl("div", { cls: "library-field" });
+		this.categoriesSuggestionsEl = categoriesContainer.createEl("div", {
+			cls: "library-suggestions-dropdown",
+		});
+
+		// Tags field with suggestions
+		const tagsField = contentEl.createEl("div", {
+			cls: "library-field library-field-with-suggestions",
+		});
 		tagsField.createEl("label", {
 			text: "الوسوم (اختياري)",
 			cls: "library-label",
 		});
-		this.tagsInput = tagsField.createEl("input", {
+
+		const tagsContainer = tagsField.createEl("div", {
+			cls: "library-input-container",
+		});
+
+		this.tagsInput = tagsContainer.createEl("input", {
 			type: "text",
-			cls: "library-input",
+			cls: "library-input library-input-with-suggestions",
 			placeholder: "فصل بفاصلة (،)",
 			value: this.benefit?.tags?.join("، ") || "",
+		});
+
+		this.tagsSuggestionsEl = tagsContainer.createEl("div", {
+			cls: "library-suggestions-dropdown",
 		});
 
 		// Action buttons
@@ -336,8 +371,9 @@ export class BenefitModal extends Modal {
 		// Set up keyboard shortcuts
 		this.setupKeyboardShortcuts();
 
-		// Add CSS styles for the toolbar
+		// Add CSS styles for the toolbar and suggestions
 		this.addToolbarStyles();
+		this.addSuggestionsStyles();
 
 		// Initial update of undo/redo buttons
 		this.updateUndoRedoButtons();
@@ -347,6 +383,9 @@ export class BenefitModal extends Modal {
 
 		// Setup automatic draft saving
 		this.setupDraftSaving();
+
+		// Setup suggestions for categories and tags
+		this.setupSuggestions();
 
 		// If we have a draft to load and we haven't loaded one yet, load it
 		if (existingDraft && !this.hasLoadedDraft) {
@@ -383,6 +422,427 @@ export class BenefitModal extends Modal {
 		this.tagsInput.addEventListener("input", () => {
 			this.hasPendingChanges = true;
 		});
+	}
+
+	/**
+	 * Gets all existing categories from benefits
+	 */
+	private async getExistingCategories(): Promise<SuggestionItem[]> {
+		const categoryCount = new Map<string, number>();
+
+		const isBook = this.file.path.startsWith(
+			this.plugin.settings.booksFolder
+		);
+
+		// Get all benefits from the plugin
+		const allBenefits = await this.plugin.benefitService.getAllBenefits(
+			isBook ? "book" : "video"
+		);
+
+		allBenefits.forEach((benefit: BenefitItem) => {
+			if (benefit.categories) {
+				benefit.categories.forEach((category: string) => {
+					const trimmedCategory = category.trim();
+					if (trimmedCategory) {
+						categoryCount.set(
+							trimmedCategory,
+							(categoryCount.get(trimmedCategory) || 0) + 1
+						);
+					}
+				});
+			}
+		});
+
+		return Array.from(categoryCount.entries())
+			.map(([value, count]) => ({ value, count }))
+			.sort(
+				(a, b) => b.count - a.count || a.value.localeCompare(b.value)
+			);
+	}
+
+	/**
+	 * Gets all existing tags from benefits
+	 */
+	private async getExistingTags(): Promise<SuggestionItem[]> {
+		const tagCount = new Map<string, number>();
+
+		const isBook = this.file.path.startsWith(
+			this.plugin.settings.booksFolder
+		);
+		// Get all benefits from the plugin
+		const allBenefits = await this.plugin.benefitService.getAllBenefits(
+			isBook ? "book" : "video"
+		);
+
+		allBenefits.forEach((benefit: BenefitItem) => {
+			if (benefit.tags) {
+				benefit.tags.forEach((tag: string) => {
+					const trimmedTag = tag.trim();
+					if (trimmedTag) {
+						tagCount.set(
+							trimmedTag,
+							(tagCount.get(trimmedTag) || 0) + 1
+						);
+					}
+				});
+			}
+		});
+
+		return Array.from(tagCount.entries())
+			.map(([value, count]) => ({ value, count }))
+			.sort(
+				(a, b) => b.count - a.count || a.value.localeCompare(b.value)
+			);
+	}
+
+	/**
+	 * Sets up suggestion functionality for categories and tags inputs
+	 */
+	private setupSuggestions(): void {
+		// Setup categories suggestions
+		this.setupInputSuggestions(
+			this.categoriesInput,
+			this.categoriesSuggestionsEl,
+			() => this.getExistingCategories()
+		);
+
+		// Setup tags suggestions
+		this.setupInputSuggestions(this.tagsInput, this.tagsSuggestionsEl, () =>
+			this.getExistingTags()
+		);
+
+		// Global click handler to hide suggestions
+		document.addEventListener("click", (e) => {
+			if (!this.categoriesInput.contains(e.target as Node)) {
+				this.hideSuggestions(this.categoriesSuggestionsEl);
+			}
+			if (!this.tagsInput.contains(e.target as Node)) {
+				this.hideSuggestions(this.tagsSuggestionsEl);
+			}
+		});
+	}
+
+	/**
+	 * Sets up suggestion functionality for a specific input
+	 */
+	private setupInputSuggestions(
+		inputEl: HTMLInputElement,
+		suggestionsEl: HTMLElement,
+		getSuggestions: () => Promise<SuggestionItem[]> | SuggestionItem[]
+	): void {
+		let debounceTimeout: number;
+
+		inputEl.addEventListener("input", (e) => {
+			clearTimeout(debounceTimeout);
+			debounceTimeout = window.setTimeout(async () => {
+				const suggestions = await Promise.resolve(getSuggestions());
+				this.showSuggestions(inputEl, suggestionsEl, () => suggestions);
+			}, 150);
+		});
+
+		inputEl.addEventListener("focus", async () => {
+			const suggestions = await Promise.resolve(getSuggestions());
+			this.showSuggestions(inputEl, suggestionsEl, () => suggestions);
+		});
+
+		inputEl.addEventListener("keydown", (e) => {
+			this.handleSuggestionKeydown(e, suggestionsEl);
+		});
+	}
+
+	/**
+	 * Shows suggestions for an input
+	 */
+	private showSuggestions(
+		inputEl: HTMLInputElement,
+		suggestionsEl: HTMLElement,
+		getSuggestions: () => SuggestionItem[]
+	): void {
+		const inputValue = inputEl.value;
+		const cursorPosition = inputEl.selectionStart || 0;
+
+		// Get the current word being typed (after the last comma)
+		const beforeCursor = inputValue.substring(0, cursorPosition);
+		const lastCommaIndex = beforeCursor.lastIndexOf("،");
+		const currentWord = beforeCursor.substring(lastCommaIndex + 1).trim();
+
+		// Get existing values in the input to avoid duplicates
+		const existingValues = inputValue
+			.split("،")
+			.map((v) => v.trim())
+			.filter((v) => v);
+
+		// Filter suggestions based on current word and exclude existing values
+		const allSuggestions = getSuggestions();
+		const filteredSuggestions = allSuggestions.filter((suggestion) => {
+			const matchesSearch =
+				!currentWord ||
+				suggestion.value
+					.toLowerCase()
+					.includes(currentWord.toLowerCase());
+			const notAlreadyUsed = !existingValues.includes(suggestion.value);
+			return matchesSearch && notAlreadyUsed;
+		});
+
+		// Limit to top 10 suggestions
+		this.currentSuggestions = filteredSuggestions.slice(0, 10);
+		this.currentInputEl = inputEl;
+		this.activeSuggestionIndex = -1;
+
+		// Clear and populate suggestions
+		suggestionsEl.empty();
+
+		if (this.currentSuggestions.length === 0) {
+			this.hideSuggestions(suggestionsEl);
+			return;
+		}
+
+		this.currentSuggestions.forEach((suggestion, index) => {
+			const suggestionEl = suggestionsEl.createEl("div", {
+				cls: "library-suggestion-item",
+			});
+
+			const textEl = suggestionEl.createEl("span", {
+				text: suggestion.value,
+				cls: "library-suggestion-text",
+			});
+
+			const countEl = suggestionEl.createEl("span", {
+				text: `(${suggestion.count})`,
+				cls: "library-suggestion-count",
+			});
+
+			suggestionEl.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.applySuggestion(inputEl, suggestion.value);
+				this.hideSuggestions(suggestionsEl);
+			});
+
+			suggestionEl.addEventListener("mouseenter", () => {
+				this.setActiveSuggestion(index, suggestionsEl);
+			});
+		});
+
+		// Show the suggestions dropdown
+		suggestionsEl.style.display = "block";
+	}
+
+	/**
+	 * Hides suggestions dropdown
+	 */
+	private hideSuggestions(suggestionsEl: HTMLElement): void {
+		suggestionsEl.style.display = "none";
+		this.currentSuggestions = [];
+		this.currentInputEl = null;
+		this.activeSuggestionIndex = -1;
+	}
+
+	/**
+	 * Handles keyboard navigation in suggestions
+	 */
+	private handleSuggestionKeydown(
+		e: KeyboardEvent,
+		suggestionsEl: HTMLElement
+	): void {
+		if (this.currentSuggestions.length === 0) return;
+
+		switch (e.key) {
+			case "ArrowDown":
+				e.preventDefault();
+				this.setActiveSuggestion(
+					Math.min(
+						this.activeSuggestionIndex + 1,
+						this.currentSuggestions.length - 1
+					),
+					suggestionsEl
+				);
+				break;
+
+			case "ArrowUp":
+				e.preventDefault();
+				this.setActiveSuggestion(
+					Math.max(this.activeSuggestionIndex - 1, -1),
+					suggestionsEl
+				);
+				break;
+
+			case "Enter":
+			case "Tab":
+				if (this.activeSuggestionIndex >= 0) {
+					e.preventDefault();
+					const suggestion =
+						this.currentSuggestions[this.activeSuggestionIndex];
+					this.applySuggestion(
+						this.currentInputEl!,
+						suggestion.value
+					);
+					this.hideSuggestions(suggestionsEl);
+				}
+				break;
+
+			case "Escape":
+				this.hideSuggestions(suggestionsEl);
+				break;
+		}
+	}
+
+	/**
+	 * Sets the active suggestion for keyboard navigation
+	 */
+	private setActiveSuggestion(
+		index: number,
+		suggestionsEl: HTMLElement
+	): void {
+		// Remove active class from all suggestions
+		suggestionsEl
+			.querySelectorAll(".library-suggestion-item")
+			.forEach((el) => {
+				el.removeClass("active");
+			});
+
+		this.activeSuggestionIndex = index;
+
+		// Add active class to the selected suggestion
+		if (index >= 0) {
+			const activeEl = suggestionsEl.children[index] as HTMLElement;
+			activeEl.addClass("active");
+		}
+	}
+
+	/**
+	 * Applies a suggestion to the input
+	 */
+	private applySuggestion(
+		inputEl: HTMLInputElement,
+		suggestionValue: string
+	): void {
+		const inputValue = inputEl.value;
+		const cursorPosition = inputEl.selectionStart || 0;
+
+		// Get the current word being typed (after the last comma)
+		const beforeCursor = inputValue.substring(0, cursorPosition);
+		const afterCursor = inputValue.substring(cursorPosition);
+		const lastCommaIndex = beforeCursor.lastIndexOf("،");
+
+		let newValue: string;
+		let newCursorPosition: number;
+
+		if (lastCommaIndex >= 0) {
+			// Replace the current word after the last comma
+			const beforeLastComma = inputValue.substring(0, lastCommaIndex + 1);
+			newValue = beforeLastComma + " " + suggestionValue + afterCursor;
+			newCursorPosition =
+				beforeLastComma.length + 1 + suggestionValue.length;
+		} else {
+			// Replace the entire input or add to the beginning
+			newValue = suggestionValue + afterCursor;
+			newCursorPosition = suggestionValue.length;
+		}
+
+		// If there's more content after and it doesn't start with comma, add comma and space
+		if (afterCursor && !afterCursor.startsWith("،")) {
+			newValue =
+				inputValue.substring(0, newCursorPosition) + "، " + afterCursor;
+			newCursorPosition += 2;
+		}
+
+		inputEl.value = newValue;
+		inputEl.selectionStart = newCursorPosition;
+		inputEl.selectionEnd = newCursorPosition;
+		inputEl.focus();
+
+		// Mark as having pending changes
+		this.hasPendingChanges = true;
+	}
+
+	/**
+	 * Add CSS styles for suggestions
+	 */
+	private addSuggestionsStyles(): void {
+		const styleId = "library-benefit-suggestions-styles";
+		if (!document.getElementById(styleId)) {
+			const style = document.createElement("style");
+			style.id = styleId;
+			style.textContent = `
+				.library-field-with-suggestions {
+					position: relative;
+				}
+				
+				.library-input-container {
+					position: relative;
+				}
+				
+				.library-input-with-suggestions {
+					position: relative;
+					z-index: 1;
+				}
+				
+				.library-suggestions-dropdown {
+					position: absolute;
+					top: 100%;
+					left: 0;
+					right: 0;
+					background: var(--background-primary);
+					border: 1px solid var(--background-modifier-border);
+					border-radius: 4px;
+					box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+					max-height: 200px;
+					overflow-y: auto;
+					z-index: 1000;
+					display: none;
+					margin-top: 2px;
+				}
+				
+				.library-suggestion-item {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					padding: 8px 12px;
+					cursor: pointer;
+					border-bottom: 1px solid var(--background-modifier-border);
+				}
+				
+				.library-suggestion-item:last-child {
+					border-bottom: none;
+				}
+				
+				.library-suggestion-item:hover,
+				.library-suggestion-item.active {
+					background: var(--background-modifier-hover);
+				}
+				
+				.library-suggestion-text {
+					flex: 1;
+					text-align: right;
+					color: var(--text-normal);
+				}
+				
+				.library-suggestion-count {
+					color: var(--text-muted);
+					font-size: 0.9em;
+					margin-left: 8px;
+				}
+				
+				.library-suggestions-dropdown::-webkit-scrollbar {
+					width: 6px;
+				}
+				
+				.library-suggestions-dropdown::-webkit-scrollbar-track {
+					background: var(--background-secondary);
+				}
+				
+				.library-suggestions-dropdown::-webkit-scrollbar-thumb {
+					background: var(--background-modifier-border);
+					border-radius: 3px;
+				}
+				
+				.library-suggestions-dropdown::-webkit-scrollbar-thumb:hover {
+					background: var(--text-muted);
+				}
+			`;
+			document.head.appendChild(style);
+		}
 	}
 
 	/**
@@ -1859,6 +2319,10 @@ export class BenefitModal extends Modal {
 		if (this.hasPendingChanges) {
 			this.saveDraft();
 		}
+
+		// Hide any open suggestions
+		this.hideSuggestions(this.categoriesSuggestionsEl);
+		this.hideSuggestions(this.tagsSuggestionsEl);
 
 		const { contentEl } = this;
 		contentEl.empty();
