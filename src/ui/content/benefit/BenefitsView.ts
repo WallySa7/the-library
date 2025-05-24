@@ -317,8 +317,7 @@ export class BenefitsView {
 
 		this.searchInput = searchWrapper.createEl("input", {
 			type: "text",
-			placeholder:
-				"بحث متقدم في الفوائد (النص، العنوان، المؤلف، المصدر)...",
+			placeholder: "بحث في نص الفوائد...", // Updated placeholder to reflect text-only search
 			cls: "library-benefits-search-input",
 		});
 
@@ -678,7 +677,7 @@ export class BenefitsView {
 	}
 
 	/**
-	 * Renders flat options list with checkboxes
+	 * Renders flat options list with checkboxes - FIXED EVENT HANDLING
 	 */
 	private renderFlatOptions(
 		container: HTMLElement,
@@ -736,9 +735,25 @@ export class BenefitsView {
 				onChange();
 			};
 
-			checkbox.addEventListener("change", toggleOption);
-			optionItem.addEventListener("click", (e) => {
+			// FIXED: Separate handling for checkbox and option item clicks
+			checkbox.addEventListener("change", (e) => {
+				e.stopPropagation(); // Prevent bubbling to option item
 				toggleOption();
+			});
+
+			// Only add click handler to the label, not the entire option item
+			label.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				toggleOption();
+			});
+
+			// Make the option item clickable but exclude checkbox area
+			optionItem.addEventListener("click", (e) => {
+				// Only toggle if the click wasn't on the checkbox itself
+				if (e.target !== checkbox) {
+					toggleOption();
+				}
 			});
 		});
 	}
@@ -753,7 +768,7 @@ export class BenefitsView {
 	}
 
 	/**
-	 * Renders hierarchical options with indentation
+	 * Renders hierarchical options with indentation - FIXED EVENT HANDLING
 	 */
 	private renderHierarchicalOptions(
 		container: HTMLElement,
@@ -807,9 +822,25 @@ export class BenefitsView {
 					onChange();
 				};
 
-				checkbox.addEventListener("change", toggleOption);
-				optionItem.addEventListener("click", (e) => {
+				// FIXED: Separate handling for checkbox and option item clicks
+				checkbox.addEventListener("change", (e) => {
+					e.stopPropagation(); // Prevent bubbling to option item
 					toggleOption();
+				});
+
+				// Only add click handler to the label, not the entire option item
+				label.addEventListener("click", (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					toggleOption();
+				});
+
+				// Make the option item clickable but exclude checkbox area
+				optionItem.addEventListener("click", (e) => {
+					// Only toggle if the click wasn't on the checkbox itself
+					if (e.target !== checkbox) {
+						toggleOption();
+					}
 				});
 
 				// Render children recursively
@@ -957,37 +988,15 @@ export class BenefitsView {
 		const query = filterState.searchQuery.toLowerCase().trim();
 
 		return this.props.benefits.filter((benefit) => {
-			// Search query filtering
+			// FIXED: Search query filtering - ONLY search in benefit text
 			if (query) {
 				const searchTerms = query
 					.split(/\s+/)
 					.filter((term) => term.length > 0);
 
-				const matchesSearch =
-					searchTerms.every((term) =>
-						benefit.title.toLowerCase().includes(term)
-					) ||
-					searchTerms.every((term) =>
-						benefit.text.toLowerCase().includes(term)
-					) ||
-					(benefit.parentTitle &&
-						searchTerms.every((term) =>
-							benefit.parentTitle!.toLowerCase().includes(term)
-						)) ||
-					(benefit.author &&
-						searchTerms.every((term) =>
-							benefit.author!.toLowerCase().includes(term)
-						)) ||
-					benefit.categories.some((cat) =>
-						searchTerms.every((term) =>
-							cat.toLowerCase().includes(term)
-						)
-					) ||
-					benefit.tags.some((tag) =>
-						searchTerms.every((term) =>
-							tag.toLowerCase().includes(term)
-						)
-					);
+				const matchesSearch = searchTerms.every((term) =>
+					benefit.text.toLowerCase().includes(term)
+				);
 
 				if (!matchesSearch) return false;
 			}
@@ -1039,7 +1048,7 @@ export class BenefitsView {
 	}
 
 	/**
-	 * Enhanced filter application with hierarchical support
+	 * Enhanced filter application with hierarchical support - FIXED SEARCH
 	 */
 	private applyFilters(): void {
 		const query = this.filterState.searchQuery.toLowerCase().trim();
@@ -1048,7 +1057,7 @@ export class BenefitsView {
 			.map((benefit) => {
 				const benefitWithMatches = { ...benefit } as BenefitWithMatches;
 
-				// Search query filtering with highlighting
+				// FIXED: Search query filtering with highlighting - ONLY in benefit text
 				if (query) {
 					const matches: { [field: string]: string } = {};
 					let hasMatch = false;
@@ -1058,46 +1067,15 @@ export class BenefitsView {
 						.split(/\s+/)
 						.filter((term) => term.length > 0);
 
-					const checkMatch = (text: string, field: string) => {
-						const lowerText = text.toLowerCase();
-						if (
-							searchTerms.every((term) =>
-								lowerText.includes(term)
-							)
-						) {
-							matches[field] = this.highlightMultipleTerms(
-								text,
-								searchTerms
-							);
-							return true;
-						}
-						return false;
-					};
-
-					// Check all fields
-					if (checkMatch(benefit.title, "title")) hasMatch = true;
-					if (checkMatch(benefit.text, "text")) hasMatch = true;
-					if (
-						benefit.parentTitle &&
-						checkMatch(benefit.parentTitle, "parentTitle")
-					)
+					// ONLY check benefit text
+					const lowerText = benefit.text.toLowerCase();
+					if (searchTerms.every((term) => lowerText.includes(term))) {
+						matches["text"] = this.highlightMultipleTerms(
+							benefit.text,
+							searchTerms
+						);
 						hasMatch = true;
-					if (benefit.author && checkMatch(benefit.author, "author"))
-						hasMatch = true;
-
-					// Check categories and tags
-					const categoryMatch = benefit.categories.some((cat) =>
-						searchTerms.every((term) =>
-							cat.toLowerCase().includes(term)
-						)
-					);
-					const tagMatch = benefit.tags.some((tag) =>
-						searchTerms.every((term) =>
-							tag.toLowerCase().includes(term)
-						)
-					);
-
-					if (categoryMatch || tagMatch) hasMatch = true;
+					}
 
 					if (!hasMatch) return null;
 					benefitWithMatches.matches = matches;
