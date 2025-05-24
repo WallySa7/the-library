@@ -211,22 +211,22 @@ export const DEFAULT_BOOK_FOLDER_RULES: FolderRulesSettings = {
  * Default video template
  */
 export const DEFAULT_VIDEO_TEMPLATE = `---
-${VIDEO_FRONTMATTER.TITLE}: "{{title}}"
 ${VIDEO_FRONTMATTER.TYPE}: {{type}}
+${VIDEO_FRONTMATTER.TITLE}: "{{title}}"
 ${VIDEO_FRONTMATTER.PRESENTER}: {{presenter}}
 ${VIDEO_FRONTMATTER.DURATION}: {{duration}}
-${VIDEO_FRONTMATTER.DATE_ADDED}: {{date}}
-${VIDEO_FRONTMATTER.START_DATE}: {{startDate}}
-${VIDEO_FRONTMATTER.COMPLETION_DATE}: {{completionDate}}
 ${VIDEO_FRONTMATTER.URL}: {{url}}
-${VIDEO_FRONTMATTER.VIDEO_ID}: {{videoId}}
 ${VIDEO_FRONTMATTER.TAGS}:
 {{tags}}
 ${VIDEO_FRONTMATTER.CATEGORIES}:
 {{categories}}
-${VIDEO_FRONTMATTER.THUMBNAIL}: {{thumbnailUrl}}
 ${VIDEO_FRONTMATTER.STATUS}: {{status}}
 ${VIDEO_FRONTMATTER.LANGUAGE}: {{language}}
+${VIDEO_FRONTMATTER.THUMBNAIL}: {{thumbnailUrl}}
+${VIDEO_FRONTMATTER.VIDEO_ID}: {{videoId}}
+${VIDEO_FRONTMATTER.DATE_ADDED}: {{date}}
+${VIDEO_FRONTMATTER.START_DATE}: {{startDate}}
+${VIDEO_FRONTMATTER.COMPLETION_DATE}: {{completionDate}}
 ---
 
 # {{title}}
@@ -242,33 +242,37 @@ ${VIDEO_FRONTMATTER.LANGUAGE}: {{language}}
 {{#if startDate}}- **تاريخ البدء:** {{startDate}}{{/if}}
 {{#if completionDate}}- **تاريخ الانتهاء:** {{completionDate}}{{/if}}
 
-[مشاهدة على يوتيوب]({{url}})`;
+[مشاهدة على يوتيوب]({{url}})
+
+
+## الفوائد`;
 
 /**
  * Default playlist template
  */
 export const DEFAULT_PLAYLIST_TEMPLATE = `---
-${VIDEO_FRONTMATTER.TITLE}: "{{title}}"
-${VIDEO_FRONTMATTER.PLAYLIST_URL}: "{{url}}"
-${VIDEO_FRONTMATTER.PLAYLIST_ID}: "{{playlistId}}"
-${VIDEO_FRONTMATTER.PRESENTER}: "{{presenter}}"
 ${VIDEO_FRONTMATTER.TYPE}: "{{type}}"
-${VIDEO_FRONTMATTER.ITEM_COUNT}: {{itemCount}}
+${VIDEO_FRONTMATTER.TITLE}: "{{title}}"
+${VIDEO_FRONTMATTER.PRESENTER}: "{{presenter}}"
 ${VIDEO_FRONTMATTER.TOTAL_DURATION}: "{{duration}}"
+${VIDEO_FRONTMATTER.ITEM_COUNT}: {{itemCount}}
+${VIDEO_FRONTMATTER.PLAYLIST_URL}: "{{url}}"
+${VIDEO_FRONTMATTER.TAGS}:
+{{tags}}
+${VIDEO_FRONTMATTER.CATEGORIES}:
+{{categories}}
 ${VIDEO_FRONTMATTER.STATUS}: "{{status}}"
+${VIDEO_FRONTMATTER.LANGUAGE}: "{{language}}"
+${VIDEO_FRONTMATTER.THUMBNAIL}: "{{thumbnailUrl}}"
+${VIDEO_FRONTMATTER.PLAYLIST_ID}: "{{playlistId}}"
 ${VIDEO_FRONTMATTER.DATE_ADDED}: "{{dateAdded}}"
 ${VIDEO_FRONTMATTER.START_DATE}: "{{startDate}}"
 ${VIDEO_FRONTMATTER.COMPLETION_DATE}: "{{completionDate}}"
-${VIDEO_FRONTMATTER.CATEGORIES}:
-{{categories}}
-${VIDEO_FRONTMATTER.THUMBNAIL}: "{{thumbnailUrl}}"
-${VIDEO_FRONTMATTER.TAGS}:
-{{tags}}
-${VIDEO_FRONTMATTER.LANGUAGE}: "{{language}}"
 ---
 
 # {{title}}
 
+## تفاصيل السلسلة
 - **الملقي**: {{presenter}}
 - **عدد المقاطع**: {{itemCount}}
 - **المدة الإجمالية**: {{duration}}
@@ -287,23 +291,23 @@ ${VIDEO_FRONTMATTER.LANGUAGE}: "{{language}}"
  * Default book template
  */
 export const DEFAULT_BOOK_TEMPLATE = `---
-${BOOK_FRONTMATTER.TITLE}: "{{title}}"
 ${BOOK_FRONTMATTER.TYPE}: {{type}}
+${BOOK_FRONTMATTER.TITLE}: "{{title}}"
 ${BOOK_FRONTMATTER.AUTHOR}: {{author}}
 ${BOOK_FRONTMATTER.PAGE_COUNT}: {{pageCount}}
-${BOOK_FRONTMATTER.DATE_ADDED}: {{date}}
-${BOOK_FRONTMATTER.START_DATE}: {{startDate}}
-${BOOK_FRONTMATTER.COMPLETION_DATE}: {{completionDate}}
 ${BOOK_FRONTMATTER.PUBLISHER}: {{publisher}}
 ${BOOK_FRONTMATTER.PUBLISH_YEAR}: {{publishYear}}
+${BOOK_FRONTMATTER.RATING}: {{rating}}
 ${BOOK_FRONTMATTER.TAGS}:
 {{tags}}
-${BOOK_FRONTMATTER.COVER}: {{coverUrl}}
 ${BOOK_FRONTMATTER.CATEGORIES}:
 {{categories}}
 ${BOOK_FRONTMATTER.STATUS}: {{status}}
 ${BOOK_FRONTMATTER.LANGUAGE}: {{language}}
-${BOOK_FRONTMATTER.RATING}: {{rating}}
+${BOOK_FRONTMATTER.COVER}: {{coverUrl}}
+${BOOK_FRONTMATTER.DATE_ADDED}: {{date}}
+${BOOK_FRONTMATTER.START_DATE}: {{startDate}}
+${BOOK_FRONTMATTER.COMPLETION_DATE}: {{completionDate}}
 ---
 
 # {{title}}
@@ -359,8 +363,8 @@ export const DEFAULT_SHARE_OPTIONS: BenefitShareOptions = {
  */
 export const DEFAULT_SETTINGS: LibrarySettings = {
 	youtubeApiKey: "",
-	videosFolder: "The Library/Videos",
-	booksFolder: "The Library/Books",
+	videosFolder: "الفيديوهات",
+	booksFolder: "الكتب",
 	defaultPresenter: "غير معروف",
 	defaultAuthor: "غير معروف",
 	dateFormat: "YYYY-MM-DD",
