@@ -3319,6 +3319,7 @@
 /* Benefit Modal Styles */
 .library-benefit-modal {
 	max-width: 600px;
+	direction: rtl;
 }
 
 .library-benefit-text-field {
