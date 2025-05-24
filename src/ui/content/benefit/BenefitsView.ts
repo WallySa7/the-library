@@ -1,4 +1,4 @@
-// src/ui/content/benefits/BenefitsView.ts
+// src/ui/content/benefit/BenefitsView.ts
 
 import { setIcon, Notice, Menu } from "obsidian";
 import { BenefitItem } from "../../../core";
@@ -17,13 +17,31 @@ interface BenefitsViewProps extends ContentComponentProps {
 }
 
 /**
+ * Result of a search match, including the field and match positions
+ */
+interface SearchMatch {
+	field: "title" | "text" | "parentTitle" | "author" | "categories" | "tags";
+	original: string;
+	highlighted: string;
+}
+
+/**
+ * Benefit with search match information
+ */
+interface BenefitWithMatches extends BenefitItem {
+	matches?: {
+		[field: string]: string;
+	};
+}
+
+/**
  * Component for displaying benefits
  */
 export class BenefitsView {
 	private props: BenefitsViewProps;
 	private container: HTMLElement | null = null;
 	private searchInput: HTMLInputElement | null = null;
-	private filteredBenefits: BenefitItem[] = [];
+	private filteredBenefits: BenefitWithMatches[] = [];
 	private currentPage = 1;
 	private itemsPerPage = 20;
 
@@ -75,6 +93,10 @@ export class BenefitsView {
 			placeholder: "بحث في الفوائد...",
 			cls: "library-benefits-search-input",
 		});
+
+		if (this.searchQuery) {
+			this.searchInput.value = this.searchQuery;
+		}
 
 		this.searchInput.addEventListener("input", () => {
 			this.searchQuery = this.searchInput!.value;
@@ -213,48 +235,108 @@ export class BenefitsView {
 	}
 
 	/**
-	 * Applies filters to benefits
+	 * Applies filters to benefits and stores match information
 	 */
 	private applyFilters(): void {
-		this.filteredBenefits = this.props.benefits.filter((benefit) => {
-			// Search filter
-			if (this.searchQuery) {
-				const query = this.searchQuery.toLowerCase();
-				const matchesSearch =
-					benefit.title.toLowerCase().includes(query) ||
-					benefit.text.toLowerCase().includes(query) ||
-					benefit.parentTitle?.toLowerCase().includes(query) ||
-					benefit.author?.toLowerCase().includes(query);
+		const query = this.searchQuery.toLowerCase().trim();
 
-				if (!matchesSearch) return false;
-			}
+		this.filteredBenefits = this.props.benefits
+			.map((benefit) => {
+				const benefitWithMatches = { ...benefit } as BenefitWithMatches;
 
-			// Category filter
-			if (this.selectedCategories.size > 0) {
-				const hasCategory = benefit.categories.some((cat) =>
-					this.selectedCategories.has(cat)
-				);
-				if (!hasCategory) return false;
-			}
+				// Check for search query matches
+				if (query) {
+					const matches: { [field: string]: string } = {};
+					let hasMatch = false;
 
-			// Tag filter
-			if (this.selectedTags.size > 0) {
-				const hasTag = benefit.tags.some((tag) =>
-					this.selectedTags.has(tag)
-				);
-				if (!hasTag) return false;
-			}
+					// Check title
+					if (benefit.title.toLowerCase().includes(query)) {
+						matches.title = this.highlightText(
+							benefit.title,
+							query
+						);
+						hasMatch = true;
+					}
 
-			// Author filter
-			if (this.selectedAuthors.size > 0 && benefit.author) {
-				if (!this.selectedAuthors.has(benefit.author)) return false;
-			}
+					// Check text content
+					if (benefit.text.toLowerCase().includes(query)) {
+						matches.text = this.highlightText(benefit.text, query);
+						hasMatch = true;
+					}
 
-			return true;
-		});
+					// Check parent title
+					if (benefit.parentTitle?.toLowerCase().includes(query)) {
+						matches.parentTitle = this.highlightText(
+							benefit.parentTitle,
+							query
+						);
+						hasMatch = true;
+					}
+
+					// Check author
+					if (benefit.author?.toLowerCase().includes(query)) {
+						matches.author = this.highlightText(
+							benefit.author,
+							query
+						);
+						hasMatch = true;
+					}
+
+					// If no match found, filter this item out
+					if (!hasMatch) return null;
+
+					// Store match information
+					benefitWithMatches.matches = matches;
+				}
+
+				// Apply category filter
+				if (this.selectedCategories.size > 0) {
+					const hasCategory = benefit.categories.some((cat) =>
+						this.selectedCategories.has(cat)
+					);
+					if (!hasCategory) return null;
+				}
+
+				// Apply tag filter
+				if (this.selectedTags.size > 0) {
+					const hasTag = benefit.tags.some((tag) =>
+						this.selectedTags.has(tag)
+					);
+					if (!hasTag) return null;
+				}
+
+				// Apply author filter
+				if (this.selectedAuthors.size > 0 && benefit.author) {
+					if (!this.selectedAuthors.has(benefit.author)) return null;
+				}
+
+				return benefitWithMatches;
+			})
+			.filter(
+				(benefit): benefit is BenefitWithMatches => benefit !== null
+			);
 
 		// Reset to first page when filters change
 		this.currentPage = 1;
+	}
+
+	/**
+	 * Highlights search terms in text
+	 */
+	private highlightText(text: string, query: string): string {
+		if (!query) return text;
+
+		// Escape special regex characters
+		const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+		// Create a regex to find all instances of the query (case insensitive)
+		const regex = new RegExp(`(${escapedQuery})`, "gi");
+
+		// Replace all matches with a highlighted version
+		return text.replace(
+			regex,
+			'<span class="library-benefit-highlight">$1</span>'
+		);
 	}
 
 	/**
@@ -293,6 +375,33 @@ export class BenefitsView {
 		paginatedBenefits.forEach((benefit) => {
 			this.renderBenefitCard(benefitsContainer, benefit);
 		});
+
+		// Add search highlight styles if not already present
+		this.ensureHighlightStyles();
+	}
+
+	/**
+	 * Ensures highlight styles are added to the document
+	 */
+	private ensureHighlightStyles(): void {
+		const styleId = "library-benefit-highlight-styles";
+		if (!document.getElementById(styleId)) {
+			const style = document.createElement("style");
+			style.id = styleId;
+			style.textContent = `
+				.library-benefit-highlight {
+					background-color: rgba(255, 255, 0, 0.3);
+					border-radius: 2px;
+					padding: 0 2px;
+					font-weight: bold;
+				}
+				.theme-dark .library-benefit-highlight {
+					background-color: rgba(255, 255, 0, 0.25);
+					color: #fff;
+				}
+			`;
+			document.head.appendChild(style);
+		}
 	}
 
 	/**
@@ -300,7 +409,7 @@ export class BenefitsView {
 	 */
 	private renderBenefitCard(
 		container: HTMLElement,
-		benefit: BenefitItem
+		benefit: BenefitWithMatches
 	): void {
 		const card = container.createEl("div", {
 			cls: "library-benefit-card",
@@ -311,10 +420,17 @@ export class BenefitsView {
 			cls: "library-benefit-header",
 		});
 
+		// Render title with highlighting if matched
 		const title = header.createEl("h3", {
-			text: benefit.title,
 			cls: "library-benefit-title",
 		});
+
+		// If there's a title match, use the highlighted version
+		if (benefit.matches?.title) {
+			title.innerHTML = benefit.matches.title;
+		} else {
+			title.textContent = benefit.title;
+		}
 
 		const actions = header.createEl("div", {
 			cls: "library-benefit-actions",
@@ -367,9 +483,15 @@ export class BenefitsView {
 		});
 
 		const sourceLink = source.createEl("a", {
-			text: benefit.parentTitle || "غير معروف",
 			cls: "library-benefit-source-link",
 		});
+
+		// Use highlighted version if available
+		if (benefit.matches?.parentTitle) {
+			sourceLink.innerHTML = benefit.matches.parentTitle;
+		} else {
+			sourceLink.textContent = benefit.parentTitle || "غير معروف";
+		}
 
 		sourceLink.addEventListener("click", (e) => {
 			e.preventDefault();
@@ -377,10 +499,16 @@ export class BenefitsView {
 		});
 
 		if (benefit.author) {
-			source.createEl("span", {
-				text: ` - ${benefit.author}`,
+			const authorSpan = source.createEl("span", {
 				cls: "library-benefit-author",
 			});
+
+			// Use highlighted version for author if available
+			if (benefit.matches?.author) {
+				authorSpan.innerHTML = ` - ${benefit.matches.author}`;
+			} else {
+				authorSpan.textContent = ` - ${benefit.author}`;
+			}
 		}
 
 		// Location info (page/timestamp)
@@ -430,9 +558,12 @@ export class BenefitsView {
 			cls: "library-benefit-content",
 		});
 
-		// Simple markdown rendering (you might want to use MarkdownRenderer here)
-		const renderedText = this.renderSimpleMarkdown(benefit.text);
-		textEl.innerHTML = renderedText;
+		// Use highlighted text if available, otherwise render regular markdown
+		if (benefit.matches?.text) {
+			textEl.innerHTML = this.renderSimpleMarkdown(benefit.matches.text);
+		} else {
+			textEl.innerHTML = this.renderSimpleMarkdown(benefit.text);
+		}
 
 		// Date info
 		const dateInfo = card.createEl("div", {
@@ -520,7 +651,7 @@ export class BenefitsView {
 	}
 
 	/**
-	 * Simple markdown renderer (basic implementation)
+	 * Simple markdown renderer with preservation of HTML for highlighting
 	 */
 	private renderSimpleMarkdown(text: string): string {
 		return text
