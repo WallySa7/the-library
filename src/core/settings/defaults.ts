@@ -16,6 +16,7 @@ import {
 	DEFAULT_BOOK_STATUS,
 	DEFAULT_BOOK_STATUS_OPTIONS,
 } from "../constants";
+import { BenefitShareOptions } from "../contentTypes";
 
 /**
  * Default table columns for videos
@@ -335,6 +336,22 @@ export const DEFAULT_TEMPLATES: TemplateSettings = {
 	video: DEFAULT_VIDEO_TEMPLATE,
 	playlist: DEFAULT_PLAYLIST_TEMPLATE,
 	book: DEFAULT_BOOK_TEMPLATE,
+};
+
+/**
+ * Default share options
+ */
+export const DEFAULT_SHARE_OPTIONS: BenefitShareOptions = {
+	backgroundColor: "#1e1e1e",
+	textColor: "#ffffff",
+	fontFamily: "Arial, sans-serif",
+	fontSize: 18,
+	includeMetadata: true,
+	includeTags: true,
+	includeAuthor: true,
+	includeParentTitle: true,
+	width: 800,
+	padding: 40,
 };
 
 /**

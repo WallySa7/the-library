@@ -15,6 +15,8 @@ export * from "./templateUtils";
 export * from "./durationUtils";
 export * from "./youtubeUtils";
 
+export * from "./idGenerator";
+
 export * from "./itemUtils";
 
 /**

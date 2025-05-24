@@ -1,12 +1,14 @@
-import { Plugin, TFile } from "obsidian";
+import { Plugin, TFile, Notice } from "obsidian";
 import { VideoModal } from "./src/ui/modals/VideoModal";
 import { LibrarySettings, DEFAULT_SETTINGS } from "./src/core/settings";
 import { SettingsTab } from "./src/ui/settings/SettingsTab";
 import { DataService } from "./src/services/DataService";
 import { YouTubeService } from "./src/services/YouTubeService";
+import { BenefitService } from "./src/services/BenefitService";
 import { LibraryView } from "./src/ui/views/LibraryView";
 import { VIEW_TYPE_LIBRARY } from "./src/core/constants";
 import { ContentType } from "src/core";
+import { BenefitModal } from "./src/ui/modals/BenefitModal";
 
 /**
  * Main plugin class for The Library
@@ -19,6 +21,7 @@ export default class LibraryPlugin extends Plugin {
 	// Core services
 	dataService: DataService;
 	youtubeService: YouTubeService;
+	benefitService: BenefitService;
 
 	/**
 	 * Plugin initialization on load
@@ -58,6 +61,7 @@ export default class LibraryPlugin extends Plugin {
 	private initializeServices(): void {
 		this.dataService = new DataService(this.app, this.settings);
 		this.youtubeService = new YouTubeService(this.settings.youtubeApiKey);
+		this.benefitService = new BenefitService(this.app, this);
 	}
 
 	/**
@@ -85,11 +89,11 @@ export default class LibraryPlugin extends Plugin {
 			callback: () => this.activateView(VIEW_TYPE_LIBRARY),
 		});
 
-		// Command to add new video
+		// Command to add benefit to current note
 		this.addCommand({
-			id: "add-library-video",
-			name: "إضافة فيديو جديد",
-			callback: () => this.openVideoModal(),
+			id: "add-benefit-to-note",
+			name: "إضافة فائدة للملاحظة الحالية",
+			callback: () => this.addBenefitToCurrentNote(),
 		});
 	}
 
@@ -223,10 +227,49 @@ export default class LibraryPlugin extends Plugin {
 	}
 
 	/**
-	 * Opens the video addition modal
+	 * Adds a benefit to the current note
 	 */
-	openVideoModal(): void {
-		new VideoModal(this.app, this).open();
+	async addBenefitToCurrentNote(): Promise<void> {
+		const activeFile = this.app.workspace.getActiveFile();
+
+		if (!activeFile) {
+			new Notice("الرجاء فتح ملاحظة أولاً");
+			return;
+		}
+
+		// Check if the file is in the library folders
+		const isLibraryNote =
+			activeFile.path.startsWith(this.settings.videosFolder) ||
+			activeFile.path.startsWith(this.settings.booksFolder);
+
+		if (!isLibraryNote) {
+			new Notice("يمكن إضافة الفوائد فقط لملاحظات المكتبة");
+			return;
+		}
+
+		// Open benefit modal
+		const modal = new BenefitModal(
+			this.app,
+			this,
+			activeFile,
+			async (benefitData) => {
+				try {
+					await this.benefitService.addBenefitToNote(
+						activeFile,
+						benefitData
+					);
+					new Notice("تمت إضافة الفائدة بنجاح");
+
+					// Refresh the library view if it's open
+					this.refreshViews();
+				} catch (error) {
+					console.error("Error adding benefit:", error);
+					new Notice("حدث خطأ أثناء إضافة الفائدة");
+				}
+			}
+		);
+
+		modal.open();
 	}
 
 	/**

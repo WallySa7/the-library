@@ -107,6 +107,53 @@ export interface BookItem extends ContentItem {
 }
 
 /**
+ * Represents a benefit item
+ */
+export interface BenefitItem {
+	/** Unique identifier for the benefit */
+	id: string;
+
+	/** Benefit title */
+	title: string;
+
+	/** Main benefit text/content */
+	text: string;
+
+	/** Page number (for books) */
+	pageNumber?: number;
+
+	/** Volume number (for multi-volume books) */
+	volumeNumber?: number;
+
+	/** Video timestamp in seconds (for videos) */
+	timestamp?: number;
+
+	/** Associated categories */
+	categories: string[];
+
+	/** Associated tags */
+	tags: string[];
+
+	/** Date when the benefit was created */
+	dateCreated: string;
+
+	/** Date when the benefit was last modified */
+	dateModified?: string;
+
+	/** File path of the note containing this benefit */
+	filePath: string;
+
+	/** Type of content (video/book) */
+	contentType: "video" | "book";
+
+	/** Title of the parent content (book/video title) */
+	parentTitle?: string;
+
+	/** Author (for books) or presenter (for videos) */
+	author?: string;
+}
+
+/**
  * All types of content items supported by the plugin
  */
 export type LibraryItem = VideoItem | PlaylistItem | BookItem;
@@ -250,6 +297,60 @@ export interface BookData {
 
 	/** User's rating (1-5) */
 	rating?: number;
+}
+
+/**
+ * Data structure for creating/editing a benefit
+ */
+export interface BenefitData {
+	title: string;
+	text: string;
+	pageNumber?: number;
+	volumeNumber?: number;
+	timestamp?: number;
+	categories: string[];
+	tags: string[];
+}
+
+/**
+ * Options for sharing benefits as images
+ */
+export interface BenefitShareOptions {
+	/** Background color or gradient */
+	backgroundColor: string;
+
+	/** Text color */
+	textColor: string;
+
+	/** Font family */
+	fontFamily: string;
+
+	/** Font size for main text */
+	fontSize: number;
+
+	/** Whether to include metadata (page, timestamp, etc.) */
+	includeMetadata: boolean;
+
+	/** Whether to include categories/tags */
+	includeTags: boolean;
+
+	/** Whether to include author/presenter name */
+	includeAuthor: boolean;
+
+	/** Whether to include parent title */
+	includeParentTitle: boolean;
+
+	/** Image width in pixels */
+	width: number;
+
+	/** Padding in pixels */
+	padding: number;
+
+	/** Logo or watermark URL (optional) */
+	logoUrl?: string;
+
+	/** Custom CSS for additional styling */
+	customCSS?: string;
 }
 
 /**

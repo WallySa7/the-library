@@ -43,6 +43,26 @@ export const VIEW_MODE = {
 };
 
 /**
+ * Benefit section header pattern
+ */
+export const BENEFIT_HEADER_PATTERN = /^## (.+)$/;
+
+/**
+ * Benefit metadata patterns
+ */
+export const BENEFIT_PATTERNS = {
+	PAGE: /^الصفحة:\s*(\d+)$/,
+	VOLUME: /^المجلد:\s*(\d+)$/,
+	TIMESTAMP: /^الوقت:\s*(\d{1,2}):(\d{2}):?(\d{2})?$/,
+	CATEGORIES: /^التصنيفات:\s*(.+)$/,
+	TAGS: /^الوسوم:\s*(.+)$/,
+	BENEFIT_TEXT: /^الفائدة:\s*(.+)$/m,
+	ID: /^<!-- benefit-id:\s*(.+)\s*-->$/,
+	DATE_CREATED: /^<!-- date-created:\s*(.+)\s*-->$/,
+	DATE_MODIFIED: /^<!-- date-modified:\s*(.+)\s*-->$/,
+};
+
+/**
  * Status values for content viewing progress
  */
 export const VIDEO_STATUS = {

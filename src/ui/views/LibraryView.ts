@@ -2,7 +2,7 @@
  * Main view for The Library plugin
  * Manages the overall layout and content display
  */
-import { ItemView, WorkspaceLeaf, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, Notice, TFile } from "obsidian";
 import {
 	VIEW_TYPE_LIBRARY,
 	CONTENT_TYPE,
@@ -20,8 +20,11 @@ import { BulkActions } from "../components/BulkActions";
 import { ContentRenderer } from "../content/ContentRenderer";
 import { ContentType } from "../../core/uiTypes";
 import { LibraryItem } from "../../core/contentTypes";
+import { BenefitItem } from "../../core";
 import { AnalyticsDashboard } from "../content/video/AdvancedAnalyticsDashboard";
 import { BookAnalyticsDashboard } from "../content/book/BookAnalyticsDashboard";
+import { BenefitsView } from "../content/benefit/BenefitsView";
+import { BenefitModal } from "../modals/BenefitModal";
 
 /**
  * Main view for displaying library content
@@ -33,12 +36,16 @@ export class LibraryView extends ItemView {
 	// Current content type being displayed
 	private contentType: ContentType = CONTENT_TYPE.VIDEO;
 
+	// Current view mode (content or benefits)
+	private viewMode: "content" | "benefits" = "content";
+
 	// State management
 	private filterState: FilterState;
 	private selectionState: SelectionState;
 
 	// Content data
 	private contentItems: LibraryItem[] = [];
+	private benefitItems: BenefitItem[] = [];
 	private presenters: string[] = [];
 	private authors: string[] = [];
 	private categories: string[] = [];
@@ -46,6 +53,7 @@ export class LibraryView extends ItemView {
 
 	// UI Containers
 	private headerContainer: HTMLElement | null = null;
+	private tabsContainer: HTMLElement | null = null;
 	private filterContainer: HTMLElement | null = null;
 	private bulkActionsContainer: HTMLElement | null = null;
 	private contentContainer: HTMLElement | null = null;
@@ -57,6 +65,7 @@ export class LibraryView extends ItemView {
 	private filterBarComponent: FilterBar | null = null;
 	private bulkActionsComponent: BulkActions | null = null;
 	private contentRenderer: ContentRenderer | null = null;
+	private benefitsView: BenefitsView | null = null;
 	private paginationComponent: Pagination | null = null;
 	private dashboardComponent: AnalyticsDashboard | null = null;
 	private bookDashboardComponent: BookAnalyticsDashboard | null = null;
@@ -139,7 +148,10 @@ export class LibraryView extends ItemView {
 			const savedContentType = localStorage.getItem(
 				LOCAL_STORAGE_KEYS.CONTENT_TYPE
 			);
-			if (savedContentType === CONTENT_TYPE.VIDEO) {
+			if (
+				savedContentType === CONTENT_TYPE.VIDEO ||
+				savedContentType === CONTENT_TYPE.BOOK
+			) {
 				this.contentType = savedContentType;
 			}
 		} catch (e) {
@@ -170,6 +182,11 @@ export class LibraryView extends ItemView {
 		// Header section
 		this.headerContainer = container.createEl("div", {
 			cls: "library-header-container",
+		});
+
+		// Tabs section for switching between content and benefits
+		this.tabsContainer = container.createEl("div", {
+			cls: "library-tabs-container",
 		});
 
 		// Stats section - Add this new container BEFORE the filter section
@@ -220,6 +237,7 @@ export class LibraryView extends ItemView {
 
 		// Clean up DOM references
 		this.headerContainer = null;
+		this.tabsContainer = null;
 		this.filterContainer = null;
 		this.bulkActionsContainer = null;
 		this.contentContainer = null;
@@ -254,6 +272,12 @@ export class LibraryView extends ItemView {
 			this.contentRenderer = null;
 		}
 
+		// Clean up benefits view
+		if (this.benefitsView) {
+			this.benefitsView.destroy?.();
+			this.benefitsView = null;
+		}
+
 		// Clean up pagination component
 		if (this.paginationComponent) {
 			this.paginationComponent.destroy?.();
@@ -272,6 +296,7 @@ export class LibraryView extends ItemView {
 	 * @param forceRefresh - Whether to force a refresh of cached data
 	 */
 	async loadData(forceRefresh = false): Promise<void> {
+		// Load content data
 		if (this.contentType === CONTENT_TYPE.VIDEO) {
 			try {
 				const { items, presenters, categories, tags } =
@@ -320,6 +345,25 @@ export class LibraryView extends ItemView {
 				new Notice("خطأ في تحميل محتوى الكتب");
 			}
 		}
+
+		// Load benefits data
+		if (this.viewMode === "benefits") {
+			await this.loadBenefits();
+		}
+	}
+
+	/**
+	 * Loads benefits for the current content type
+	 */
+	async loadBenefits(): Promise<void> {
+		try {
+			this.benefitItems = await this.plugin.benefitService.getAllBenefits(
+				this.contentType === CONTENT_TYPE.VIDEO ? "video" : "book"
+			);
+		} catch (error) {
+			console.error("Error loading benefits:", error);
+			new Notice("خطأ في تحميل الفوائد");
+		}
 	}
 
 	/**
@@ -331,17 +375,188 @@ export class LibraryView extends ItemView {
 		// Render the header
 		this.renderHeader();
 
-		// Render stats with advanced analytics dashboard
-		this.renderAdvancedStats();
+		// Render tabs
+		this.renderTabs();
 
-		// Render bulk actions bar
-		this.renderBulkActions();
+		// Render content based on view mode
+		if (this.viewMode === "content") {
+			// Show content-specific UI
+			if (this.statsContainer)
+				this.statsContainer.style.display = "block";
+			if (this.filterContainer)
+				this.filterContainer.style.display = "block";
+			if (this.bulkActionsContainer)
+				this.bulkActionsContainer.style.display = "block";
 
-		// Render filter bar
-		this.renderFilterBar();
+			// Render stats with advanced analytics dashboard
+			this.renderAdvancedStats();
 
-		// Render main content
-		this.renderContent();
+			// Render bulk actions bar
+			this.renderBulkActions();
+
+			// Render filter bar
+			this.renderFilterBar();
+
+			// Render main content
+			this.renderContent();
+		} else {
+			// Hide content-specific UI for benefits view
+			if (this.statsContainer) this.statsContainer.style.display = "none";
+			if (this.filterContainer)
+				this.filterContainer.style.display = "none";
+			if (this.bulkActionsContainer)
+				this.bulkActionsContainer.style.display = "none";
+
+			// Clear content-specific components
+			if (this.filterBarComponent) {
+				this.filterBarComponent.destroy?.();
+				this.filterBarComponent = null;
+			}
+			if (this.bulkActionsComponent) {
+				this.bulkActionsComponent.destroy?.();
+				this.bulkActionsComponent = null;
+			}
+
+			// Render benefits
+			this.renderBenefits();
+		}
+	}
+
+	/**
+	 * Renders the tabs for switching between content and benefits
+	 */
+	private renderTabs(): void {
+		if (!this.tabsContainer) return;
+		this.tabsContainer.empty();
+
+		const tabs = this.tabsContainer.createEl("div", {
+			cls: "library-view-tabs",
+		});
+
+		// Content tab
+		const contentTab = tabs.createEl("button", {
+			text: "المحتوى",
+			cls: `library-view-tab ${
+				this.viewMode === "content" ? "active" : ""
+			}`,
+		});
+
+		contentTab.addEventListener("click", () => {
+			if (this.viewMode !== "content") {
+				this.viewMode = "content";
+				this.renderView();
+			}
+		});
+
+		// Benefits tab
+		const benefitsTab = tabs.createEl("button", {
+			text: "الفوائد",
+			cls: `library-view-tab ${
+				this.viewMode === "benefits" ? "active" : ""
+			}`,
+		});
+
+		benefitsTab.addEventListener("click", async () => {
+			if (this.viewMode !== "benefits") {
+				this.viewMode = "benefits";
+				await this.loadBenefits();
+				this.renderView();
+			}
+		});
+	}
+
+	/**
+	 * Renders the benefits view
+	 */
+	private renderBenefits(): void {
+		if (!this.contentContainer) return;
+		this.contentContainer.empty();
+		this.paginationContainer?.empty();
+
+		// Clean up previous views
+		if (this.contentRenderer) {
+			this.contentRenderer.destroy();
+			this.contentRenderer = null;
+		}
+
+		// Create benefits view
+		this.benefitsView = new BenefitsView({
+			app: this.app,
+			plugin: this.plugin,
+			settings: this.plugin.settings,
+			contentType: this.contentType,
+			filterState: this.filterState,
+			selectionState: this.selectionState,
+			benefits: this.benefitItems,
+			onRefresh: this.refresh.bind(this),
+			onEditBenefit: this.handleEditBenefit.bind(this),
+			onDeleteBenefit: this.handleDeleteBenefit.bind(this),
+		});
+
+		this.benefitsView.render(this.contentContainer);
+	}
+
+	/**
+	 * Handles editing a benefit
+	 */
+	private async handleEditBenefit(benefit: BenefitItem): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(benefit.filePath);
+		if (!(file instanceof TFile)) {
+			new Notice("لم يتم العثور على الملف");
+			return;
+		}
+
+		const modal = new BenefitModal(
+			this.app,
+			this.plugin,
+			file,
+			async (benefitData) => {
+				try {
+					await this.plugin.benefitService.updateBenefitInNote(
+						file,
+						benefit.id,
+						benefitData
+					);
+					new Notice("تم تحديث الفائدة بنجاح");
+
+					// Reload benefits
+					await this.loadBenefits();
+					this.renderBenefits();
+				} catch (error) {
+					console.error("Error updating benefit:", error);
+					new Notice("حدث خطأ أثناء تحديث الفائدة");
+				}
+			},
+			benefit
+		);
+
+		modal.open();
+	}
+
+	/**
+	 * Handles deleting a benefit
+	 */
+	private async handleDeleteBenefit(benefit: BenefitItem): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(benefit.filePath);
+		if (!(file instanceof TFile)) {
+			new Notice("لم يتم العثور على الملف");
+			return;
+		}
+
+		try {
+			await this.plugin.benefitService.deleteBenefitFromNote(
+				file,
+				benefit.id
+			);
+			new Notice("تم حذف الفائدة بنجاح");
+
+			// Reload benefits
+			await this.loadBenefits();
+			this.renderBenefits();
+		} catch (error) {
+			console.error("Error deleting benefit:", error);
+			new Notice("حدث خطأ أثناء حذف الفائدة");
+		}
 	}
 
 	/**

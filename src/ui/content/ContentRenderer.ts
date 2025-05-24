@@ -263,9 +263,8 @@ export class ContentRenderer {
 			if (item.status) statusSet.add(item.status);
 			if ("presenter" in item && item.presenter)
 				presenterSet.add(item.presenter);
-			typeSet.add(item.type);
-
 			if ("author" in item && item.author) authorSet.add(item.author);
+
 			typeSet.add(item.type);
 
 			// Collect categories
@@ -534,8 +533,8 @@ export class ContentRenderer {
 					bValue = "publisher" in b ? b.publisher : "";
 					break;
 				case "language":
-					aValue = "language" in a ? a.language : "";
-					bValue = "language" in b ? b.language : "";
+					aValue = a.language || "";
+					bValue = b.language || "";
 					break;
 				case "publishYear":
 					aValue = "publishYear" in a ? a.publishYear : 0;
