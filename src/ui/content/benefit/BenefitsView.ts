@@ -790,26 +790,48 @@ export class BenefitsView {
 				const item = hierarchy[key];
 
 				const optionItem = listContainer.createEl("div", {
-					cls: `dropdown-option-item hierarchical level-${level}`,
+					cls: `dropdown-option-item hierarchical level-${level} ${
+						item.hasChildren ? "has-children" : "leaf-item"
+					}`,
 				});
 
-				const checkbox = optionItem.createEl("input", {
+				// Add hierarchy indicators
+				if (level > 0) {
+					const indentContainer = optionItem.createEl("div", {
+						cls: "hierarchy-indent",
+					});
+				}
+
+				const contentContainer = optionItem.createEl("div", {
+					cls: "option-content",
+				});
+
+				const checkbox = contentContainer.createEl("input", {
 					type: "checkbox",
 					cls: "dropdown-checkbox",
 				});
 
 				checkbox.checked = selected.has(item.fullPath);
 
-				const label = optionItem.createEl("label", {
-					cls: "dropdown-option-label hierarchical",
+				const label = contentContainer.createEl("label", {
+					cls: `dropdown-option-label hierarchical ${
+						item.hasChildren ? "parent-label" : "child-label"
+					}`,
 				});
 
-				// Add indentation
-				if (level > 0) {
-					label.style.paddingLeft = `${level * 20}px`;
-				}
+				const labelText = label.createEl("span", {
+					text: key,
+					cls: "label-text",
+				});
 
-				label.textContent = key;
+				// Add item count if it's a parent
+				if (item.hasChildren) {
+					const childCount = Object.keys(item.children).length;
+					const countBadge = label.createEl("span", {
+						cls: "hierarchy-count-badge",
+						text: `(${childCount})`,
+					});
+				}
 
 				const toggleOption = () => {
 					if (selected.has(item.fullPath)) {
@@ -1542,33 +1564,108 @@ export class BenefitsView {
 					background: var(--background-modifier-hover);
 				}
 
-				.dropdown-option-item.hierarchical.level-1 {
-					padding-left: 24px;
+				.dropdown-option-item.hierarchical {
+					display: flex;
+					align-items: flex-start;
+					padding: 6px 8px;
 				}
 
-				.dropdown-option-item.hierarchical.level-2 {
-					padding-left: 36px;
+				.dropdown-option-item.hierarchical.has-children {
+					background: var(--background-secondary-alt);
+					border-left: 3px solid var(--color-accent);
+					font-weight: 500;
 				}
 
-				.dropdown-option-item.hierarchical.level-3 {
-					padding-left: 48px;
+				.dropdown-option-item.hierarchical.leaf-item:hover {
+					background: var(--background-modifier-hover);
+				}
+
+				.hierarchy-indent {
+					display: flex;
+					align-items: center;
+					margin-right: 8px;
+					min-height: 20px;
+				}
+
+				.hierarchy-line {
+					width: 16px;
+					height: 20px;
+					border-left: 1px solid var(--text-faint);
+					position: relative;
+				}
+
+				.hierarchy-line:not(:last-child)::after {
+					content: '';
+					position: absolute;
+					top: 50%;
+					left: 0;
+					width: 8px;
+					height: 1px;
+					background: var(--text-faint);
+				}
+
+				.hierarchy-branch {
+					color: var(--text-faint);
+					font-family: monospace;
+					font-size: 12px;
+					margin-right: 4px;
+					width: 20px;
+					text-align: center;
+				}
+
+				.option-content {
+					display: flex;
+					align-items: center;
+					flex: 1;
+					min-height: 24px;
 				}
 
 				.dropdown-checkbox {
 					margin-right: 8px;
 					cursor: pointer;
+					flex-shrink: 0;
 				}
 
 				.dropdown-option-label {
+					display: flex;
+					align-items: center;
 					flex: 1;
 					cursor: pointer;
 					font-size: 14px;
 					color: var(--text-normal);
+					gap: 6px;
 				}
 
-				.dropdown-option-label.hierarchical {
-					/* Additional styles for hierarchical labels */
+				.dropdown-option-label.parent-label {
+					font-weight: 600;
+					color: var(--text-accent);
 				}
+
+				.dropdown-option-label.child-label {
+					font-weight: normal;
+					color: var(--text-normal);
+				}
+
+				.hierarchy-parent-icon {
+					font-size: 12px;
+					opacity: 0.8;
+				}
+
+				.label-text {
+					flex: 1;
+				}
+
+				.hierarchy-count-badge {
+					background: var(--background-modifier-border);
+					color: var(--text-muted);
+					border-radius: 10px;
+					padding: 2px 6px;
+					font-size: 10px;
+					font-weight: normal;
+					margin-left: 4px;
+				}
+
+
 
 				.dropdown-no-options {
 					padding: 16px;
