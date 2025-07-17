@@ -596,7 +596,7 @@ export class VideoModal extends BaseModal {
 
 				// Add note about headers
 				const note = this.playlistVideoTitlesContainer.createEl("p", {
-					text: "ستتم إضافة هذه العناوين كرؤوس (##) في ملاحظة السلسلة",
+					text: "ستتم إضافة هذه العناوين كرؤوس (#) في ملاحظة السلسلة",
 					cls: "library-note",
 				});
 			} else {
