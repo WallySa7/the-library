@@ -294,6 +294,11 @@ export class VideoService extends BaseDataService {
 	 * @param data - Playlist data to create
 	 * @returns Whether creation was successful
 	 */
+	/**
+	 * Creates a new playlist note
+	 * @param data - Playlist data to create
+	 * @returns Whether creation was successful
+	 */
 	async createPlaylist(data: PlaylistData): Promise<boolean> {
 		try {
 			const formattedDate = formatDate(
@@ -360,7 +365,7 @@ export class VideoService extends BaseDataService {
 			}
 
 			// Render content using playlist template with properly formatted tags and categories
-			const content = renderTemplate(this.settings.templates.playlist, {
+			let content = renderTemplate(this.settings.templates.playlist, {
 				...data,
 				date: formattedDate,
 				dateAdded: formattedDate,
@@ -372,6 +377,25 @@ export class VideoService extends BaseDataService {
 				categories: this.formatTagsForTemplate(categories),
 				language: data.language || "",
 			});
+
+			// Add video titles content if provided
+			if (data.videoTitlesContent) {
+				// Insert video titles content before the "## الفوائد" section
+				const benefitsSection = "## الفوائد";
+				const benefitsIndex = content.indexOf(benefitsSection);
+
+				if (benefitsIndex !== -1) {
+					// Insert video titles before the benefits section
+					content =
+						content.slice(0, benefitsIndex) +
+						data.videoTitlesContent +
+						"\n\n" +
+						content.slice(benefitsIndex);
+				} else {
+					// If no benefits section found, just append to the end
+					content += data.videoTitlesContent;
+				}
+			}
 
 			// Create folder if needed
 			if (!(await this.createFolderIfNeeded(folderPath))) {

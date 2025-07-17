@@ -40,6 +40,10 @@ export class VideoModal extends BaseModal {
 	private playlistThumbnailUrl?: string = "";
 	private categoriesInput: TextComponent;
 
+	// New field for playlist video titles
+	private addVideoTitlesCheckbox: HTMLInputElement;
+	private playlistVideoTitlesContainer: HTMLElement;
+
 	// Edit mode properties
 	private existingItem: VideoItem | PlaylistItem | null = null;
 	private isEditMode: boolean = false;
@@ -162,6 +166,9 @@ export class VideoModal extends BaseModal {
 
 		// Load description from file content for videos and playlists
 		this.loadDescriptionFromFile(this.existingItem.filePath);
+
+		// Show/hide playlist-specific fields
+		this.togglePlaylistFields();
 	}
 
 	/**
@@ -293,6 +300,12 @@ export class VideoModal extends BaseModal {
 			this.typeInput.addOption("مقطع", "مقطع");
 			this.typeInput.addOption("سلسلة", "سلسلة");
 			this.typeInput.setValue("مقطع");
+
+			// Add change listener to show/hide playlist-specific fields
+			this.typeInput.onChange(() => {
+				this.togglePlaylistFields();
+			});
+
 			return container;
 		});
 
@@ -425,6 +438,181 @@ export class VideoModal extends BaseModal {
 
 			return container;
 		});
+
+		// Add playlist-specific fields
+		this.renderPlaylistSpecificFields(form);
+	}
+
+	/**
+	 * Renders playlist-specific fields
+	 * @param form Form container
+	 */
+	private renderPlaylistSpecificFields(form: HTMLElement): void {
+		// Checkbox for adding video titles as headers (playlist only)
+		const playlistOptionsContainer = this.createFormField(
+			form,
+			"خيارات السلسلة",
+			() => {
+				const container = form.createEl("div", {
+					cls: "library-playlist-options",
+				});
+
+				const checkboxContainer = container.createEl("div", {
+					cls: "library-checkbox-container",
+				});
+
+				this.addVideoTitlesCheckbox = checkboxContainer.createEl(
+					"input",
+					{
+						type: "checkbox",
+						cls: "library-checkbox",
+					}
+				);
+
+				const label = checkboxContainer.createEl("label", {
+					text: "إضافة عناوين المقاطع كرؤوس",
+					cls: "library-checkbox-label",
+				});
+
+				label.addEventListener("click", () => {
+					this.addVideoTitlesCheckbox.checked =
+						!this.addVideoTitlesCheckbox.checked;
+					this.toggleVideoTitlesPreview();
+				});
+
+				this.addVideoTitlesCheckbox.addEventListener("change", () => {
+					this.toggleVideoTitlesPreview();
+				});
+
+				return container;
+			}
+		);
+
+		// Container for video titles preview
+		this.playlistVideoTitlesContainer = form.createEl("div", {
+			cls: "library-playlist-videos-preview",
+		});
+		this.playlistVideoTitlesContainer.style.display = "none";
+
+		// Initially hide playlist options
+		playlistOptionsContainer.style.display = "none";
+		(playlistOptionsContainer as any).isPlaylistField = true;
+	}
+
+	/**
+	 * Toggles visibility of playlist-specific fields
+	 */
+	private togglePlaylistFields(): void {
+		const isPlaylist = this.typeInput.getValue() === "سلسلة";
+
+		// Find all playlist-specific fields
+		const playlistFields =
+			this.contentEl.querySelectorAll(".library-field");
+		playlistFields.forEach((field) => {
+			if ((field as any).isPlaylistField) {
+				(field as HTMLElement).style.display = isPlaylist
+					? "block"
+					: "none";
+			}
+		});
+
+		// Also hide the video titles container if not playlist
+		if (!isPlaylist) {
+			this.playlistVideoTitlesContainer.style.display = "none";
+		}
+	}
+
+	/**
+	 * Toggles video titles preview based on checkbox state
+	 */
+	private toggleVideoTitlesPreview(): void {
+		const isChecked = this.addVideoTitlesCheckbox.checked;
+
+		if (isChecked) {
+			this.playlistVideoTitlesContainer.style.display = "block";
+			this.loadVideoTitlesPreview();
+		} else {
+			this.playlistVideoTitlesContainer.style.display = "none";
+		}
+	}
+
+	/**
+	 * Loads and displays video titles preview
+	 */
+	private async loadVideoTitlesPreview(): Promise<void> {
+		const url = this.urlInput.getValue().trim();
+		if (!url) return;
+
+		const playlistId = extractPlaylistId(url);
+		if (!playlistId) return;
+
+		this.playlistVideoTitlesContainer.empty();
+
+		const loadingDiv = this.playlistVideoTitlesContainer.createEl("div", {
+			text: "جاري تحميل عناوين المقاطع...",
+			cls: "library-loading-text",
+		});
+
+		try {
+			// Get playlist videos (limit to 50 to avoid too many requests)
+			const response = await this.plugin.youtubeService.getPlaylistVideos(
+				playlistId,
+				50
+			);
+
+			loadingDiv.remove();
+
+			if (response.success && response.data && response.data.length > 0) {
+				const previewTitle = this.playlistVideoTitlesContainer.createEl(
+					"h4",
+					{
+						text: `معاينة عناوين المقاطع (${response.data.length})`,
+						cls: "library-preview-title",
+					}
+				);
+
+				const videosList = this.playlistVideoTitlesContainer.createEl(
+					"div",
+					{
+						cls: "library-videos-list",
+					}
+				);
+
+				response.data.forEach((video: any, index: number) => {
+					const videoItem = videosList.createEl("div", {
+						cls: "library-video-item",
+					});
+
+					videoItem.createEl("span", {
+						text: `${index + 1}. `,
+						cls: "library-video-number",
+					});
+
+					videoItem.createEl("span", {
+						text: video.title,
+						cls: "library-video-title",
+					});
+				});
+
+				// Add note about headers
+				const note = this.playlistVideoTitlesContainer.createEl("p", {
+					text: "ستتم إضافة هذه العناوين كرؤوس (##) في ملاحظة السلسلة",
+					cls: "library-note",
+				});
+			} else {
+				this.playlistVideoTitlesContainer.createEl("div", {
+					text: "لم يتم العثور على مقاطع في هذه السلسلة",
+					cls: "library-error-text",
+				});
+			}
+		} catch (error) {
+			console.error("Error loading video titles:", error);
+			loadingDiv.remove();
+			this.playlistVideoTitlesContainer.createEl("div", {
+				text: "خطأ في تحميل عناوين المقاطع",
+				cls: "library-error-text",
+			});
+		}
 	}
 
 	// Dedicated method for categories section
@@ -590,6 +778,7 @@ export class VideoModal extends BaseModal {
 
 			// Set type to playlist
 			this.typeInput.setValue("سلسلة");
+			this.togglePlaylistFields();
 
 			// Show playlist info
 			this.thumbnailPreview.empty();
@@ -1051,7 +1240,21 @@ export class VideoModal extends BaseModal {
 				startDate = today;
 			}
 
+			// Check if user wants to add video titles
+			let videoTitlesContent = "";
+			if (this.addVideoTitlesCheckbox.checked) {
+				this.loadingMessage = "جاري جلب عناوين المقاطع...";
+				this.updateLoadingUI();
+
+				videoTitlesContent = await this.getVideoTitlesContent(
+					playlistId
+				);
+			}
+
 			// Create the note - pass arrays directly
+			this.loadingMessage = "جاري إنشاء الملاحظة...";
+			this.updateLoadingUI();
+
 			const success = await this.plugin.dataService.createPlaylist({
 				url,
 				playlistId,
@@ -1067,6 +1270,7 @@ export class VideoModal extends BaseModal {
 				startDate,
 				completionDate,
 				language,
+				videoTitlesContent, // Pass the video titles content
 			});
 
 			if (success) {
@@ -1078,6 +1282,39 @@ export class VideoModal extends BaseModal {
 			console.error("Error adding playlist:", error);
 			this.showError("حدث خطأ أثناء إضافة السلسلة");
 			throw error;
+		}
+	}
+
+	/**
+	 * Gets video titles content for playlist
+	 * @param playlistId YouTube playlist ID
+	 * @returns Formatted content with video titles as headers
+	 */
+	private async getVideoTitlesContent(playlistId: string): Promise<string> {
+		try {
+			const response = await this.plugin.youtubeService.getPlaylistVideos(
+				playlistId,
+				100
+			);
+
+			if (
+				!response.success ||
+				!response.data ||
+				response.data.length === 0
+			) {
+				return "";
+			}
+
+			const videoTitles = response.data
+				.map((video: any, index: number) => {
+					return `# ${index + 1}. ${video.title}`;
+				})
+				.join("\n\n");
+
+			return `${videoTitles}`;
+		} catch (error) {
+			console.error("Error getting video titles:", error);
+			return "";
 		}
 	}
 }

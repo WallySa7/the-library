@@ -248,6 +248,9 @@ export interface PlaylistData {
 
 	/** Associated categories */
 	categories?: string[];
+
+	/** Video titles content as headers */
+	videoTitlesContent?: string;
 }
 
 /**
