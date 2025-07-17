@@ -1,7 +1,7 @@
 /**
- * Component for displaying videos in a table format
+ * Component for displaying videos in a table format with Hijri calendar support
  */
-import { Menu, setIcon, moment } from "obsidian";
+import { Menu, setIcon } from "obsidian";
 import { ContentComponentProps } from "../../../core/";
 import {
 	LibraryItem,
@@ -11,6 +11,7 @@ import {
 import { TableColumnConfig } from "../../../core/uiTypes";
 import { ColumnConfigModal } from "../../modals/ColumnConfigModal";
 import { ItemUtils } from "../../../utils";
+import { formatDate, createDateTooltip } from "../../../utils/dateUtils";
 
 /**
  * Props for VideoTable component
@@ -21,7 +22,7 @@ interface VideoTableProps extends ContentComponentProps {
 }
 
 /**
- * Displays videos and playlists in a table format
+ * Displays videos and playlists in a table format with Hijri calendar support
  */
 export class VideoTable {
 	private props: VideoTableProps;
@@ -212,7 +213,7 @@ export class VideoTable {
 	}
 
 	/**
-	 * Renders table rows for the current page of items
+	 * Renders table rows for the current page of items with Hijri date support
 	 * @param tbody Table body element
 	 */
 	private renderTableRows(tbody: HTMLElement): void {
@@ -317,18 +318,30 @@ export class VideoTable {
 						break;
 
 					case "dateAdded":
-						row.createEl("td").textContent = item.dateAdded
-							? moment(item.dateAdded).format("YYYY-MM-DD")
-							: "غير معروف";
+						// Enhanced date rendering with Hijri support
+						const dateAddedCell = row.createEl("td", {
+							cls: "library-date-cell",
+						});
+						this.renderDateCell(dateAddedCell, item.dateAdded);
 						break;
 
 					case "startDate":
-						row.createEl("td").textContent = item.startDate || "-";
+						// Enhanced date rendering with Hijri support
+						const startDateCell = row.createEl("td", {
+							cls: "library-date-cell",
+						});
+						this.renderDateCell(startDateCell, item.startDate);
 						break;
 
 					case "completionDate":
-						row.createEl("td").textContent =
-							item.completionDate || "-";
+						// Enhanced date rendering with Hijri support
+						const completionDateCell = row.createEl("td", {
+							cls: "library-date-cell",
+						});
+						this.renderDateCell(
+							completionDateCell,
+							item.completionDate
+						);
 						break;
 
 					case "tags":
@@ -447,6 +460,55 @@ export class VideoTable {
 						break;
 				}
 			});
+		}
+	}
+
+	/**
+	 * Renders a date cell with Hijri calendar support and tooltips
+	 * @param cell The table cell element
+	 * @param dateString The date string to render
+	 */
+	private renderDateCell(cell: HTMLElement, dateString?: string): void {
+		if (!dateString) {
+			cell.textContent = "-";
+			return;
+		}
+
+		try {
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) {
+				cell.textContent = "تاريخ غير صحيح";
+				return;
+			}
+
+			// Format the date using the current calendar system
+			const formattedDate = formatDate(date, {
+				settings: this.props.settings.hijriCalendar,
+			});
+
+			cell.textContent = formattedDate;
+
+			// Add tooltip with both calendar systems if enabled
+			if (this.props.settings.hijriCalendar.showBothInTooltips) {
+				const tooltip = createDateTooltip(
+					date,
+					this.props.settings.hijriCalendar
+				);
+				if (tooltip) {
+					cell.setAttribute("title", tooltip);
+					cell.addClass("library-date-with-tooltip");
+				}
+			}
+
+			// Add calendar type class for styling
+			const calendarType = this.props.settings.hijriCalendar
+				.useHijriCalendar
+				? "hijri"
+				: "gregorian";
+			cell.addClass(`library-date-${calendarType}`);
+		} catch (error) {
+			console.warn("Error formatting date:", dateString, error);
+			cell.textContent = "تاريخ غير صحيح";
 		}
 	}
 

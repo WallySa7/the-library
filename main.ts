@@ -1,6 +1,10 @@
 import { Plugin, TFile, Notice } from "obsidian";
 import { VideoModal } from "./src/ui/modals/VideoModal";
-import { LibrarySettings, DEFAULT_SETTINGS } from "./src/core/settings";
+import {
+	LibrarySettings,
+	DEFAULT_SETTINGS,
+	DEFAULT_HIJRI_SETTINGS,
+} from "./src/core/settings";
 import { SettingsTab } from "./src/ui/settings/SettingsTab";
 import { DataService } from "./src/services/DataService";
 import { YouTubeService } from "./src/services/YouTubeService";
@@ -11,7 +15,7 @@ import { ContentType } from "src/core";
 import { BenefitModal } from "./src/ui/modals/BenefitModal";
 
 /**
- * Main plugin class for The Library
+ * Main plugin class for The Library with Hijri calendar support
  * Manages plugin lifecycle and core functionality
  */
 export default class LibraryPlugin extends Plugin {
@@ -27,7 +31,7 @@ export default class LibraryPlugin extends Plugin {
 	 * Plugin initialization on load
 	 */
 	async onload() {
-		console.log("Loading The Library plugin");
+		console.log("Loading The Library plugin with Hijri calendar support");
 
 		// Load settings first as other components depend on them
 		await this.loadSettings();
@@ -79,7 +83,7 @@ export default class LibraryPlugin extends Plugin {
 	}
 
 	/**
-	 * Register all plugin commands
+	 * Register all plugin commands including calendar toggle
 	 */
 	private registerCommands(): void {
 		// Command to open the main library view
@@ -145,13 +149,34 @@ export default class LibraryPlugin extends Plugin {
 	}
 
 	/**
-	 * Loads plugin settings
+	 * Loads plugin settings with Hijri calendar migration
 	 */
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign(
+		const loadedData = await this.loadData();
+
+		// Create settings with defaults
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+
+		// Handle migration for hijriCalendar settings
+		if (!this.settings.hijriCalendar) {
+			console.log("Migrating to new Hijri calendar settings");
+			this.settings.hijriCalendar = { ...DEFAULT_HIJRI_SETTINGS };
+
+			// If there was a legacy dateFormat, try to map it to gregorianFormat
+			if (
+				this.settings.dateFormat &&
+				this.settings.dateFormat !== "YYYY-MM-DD"
+			) {
+				this.settings.hijriCalendar.gregorianFormat =
+					this.settings.dateFormat;
+			}
+		}
+
+		// Ensure all Hijri calendar settings have default values
+		this.settings.hijriCalendar = Object.assign(
 			{},
-			DEFAULT_SETTINGS,
-			await this.loadData()
+			DEFAULT_HIJRI_SETTINGS,
+			this.settings.hijriCalendar
 		);
 
 		// Ensure all settings have default values
@@ -171,6 +196,22 @@ export default class LibraryPlugin extends Plugin {
 		// Ensure view mode is set
 		if (!this.settings.viewMode) {
 			this.settings.viewMode = DEFAULT_SETTINGS.viewMode;
+		}
+
+		// Ensure hijriCalendar is properly set with all fields
+		if (!this.settings.hijriCalendar) {
+			this.settings.hijriCalendar = { ...DEFAULT_HIJRI_SETTINGS };
+		} else {
+			// Fill in any missing hijri calendar settings
+			for (const [key, value] of Object.entries(DEFAULT_HIJRI_SETTINGS)) {
+				if (
+					this.settings.hijriCalendar[
+						key as keyof typeof DEFAULT_HIJRI_SETTINGS
+					] === undefined
+				) {
+					(this.settings.hijriCalendar as any)[key] = value;
+				}
+			}
 		}
 	}
 

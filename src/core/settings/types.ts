@@ -4,6 +4,26 @@
 import { TableColumnConfig } from "../uiTypes";
 
 /**
+ * Hijri calendar settings
+ */
+export interface HijriCalendarSettings {
+	/** Whether to use Hijri calendar by default */
+	useHijriCalendar: boolean;
+
+	/** Format for displaying Hijri dates */
+	hijriFormat: string;
+
+	/** Format for displaying Gregorian dates */
+	gregorianFormat: string;
+
+	/** Whether to show calendar type indicator */
+	showCalendarType: boolean;
+
+	/** Whether to show both calendars in tooltips */
+	showBothInTooltips: boolean;
+}
+
+/**
  * Progress tracking settings
  */
 export interface ProgressTrackingSettings {
@@ -63,6 +83,9 @@ export interface LibrarySettings {
 
 	/** Date format for timestamps */
 	dateFormat: string;
+
+	/** Hijri calendar configuration */
+	hijriCalendar: HijriCalendarSettings;
 
 	/** Whether to show thumbnails in videos views */
 	showVideosThumbnails: boolean;

@@ -5,6 +5,7 @@ import { Menu, setIcon, moment } from "obsidian";
 import { ContentComponentProps } from "../../../core/uiTypes";
 import { BookItem, LibraryItem } from "../../../core/contentTypes";
 import { ItemUtils } from "../../../utils/itemUtils";
+import { createDateTooltip, formatDate } from "src/utils";
 
 /**
  * Props for BookCard component
@@ -212,11 +213,7 @@ export class BookCard {
 
 		setIcon(dateInfo, "calendar");
 
-		dateInfo.createEl("span", {
-			text: item.dateAdded
-				? moment(item.dateAdded).format("YYYY-MM-DD")
-				: "غير معروف",
-		});
+		this.renderDateCell(dateInfo.createEl("span", {}), item.dateAdded);
 
 		// Rating (if available)
 		if (item.rating) {
@@ -240,9 +237,10 @@ export class BookCard {
 
 			setIcon(startDateInfo, "play-circle");
 
-			startDateInfo.createEl("span", {
-				text: `تاريخ البدء: ${item.startDate}`,
-			});
+			this.renderDateCell(
+				startDateInfo.createEl("span", {}),
+				item.startDate
+			);
 		}
 
 		// Completion date info if available
@@ -253,9 +251,10 @@ export class BookCard {
 
 			setIcon(completionDateInfo, "check-circle");
 
-			completionDateInfo.createEl("span", {
-				text: `تاريخ الانتهاء: ${item.completionDate}`,
-			});
+			this.renderDateCell(
+				completionDateInfo.createEl("span", {}),
+				item.completionDate
+			);
 		}
 
 		// Categories if available
@@ -484,6 +483,55 @@ export class BookCard {
 
 		const rect = element.getBoundingClientRect();
 		statusMenu.showAtPosition({ x: rect.left, y: rect.bottom });
+	}
+
+	/**
+	 * Renders a date cell with Hijri calendar support and tooltips
+	 * @param cell The table cell element
+	 * @param dateString The date string to render
+	 */
+	private renderDateCell(cell: HTMLElement, dateString?: string): void {
+		if (!dateString) {
+			cell.textContent = "-";
+			return;
+		}
+
+		try {
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) {
+				cell.textContent = "تاريخ غير صحيح";
+				return;
+			}
+
+			// Format the date using the current calendar system
+			const formattedDate = formatDate(date, {
+				settings: this.props.settings.hijriCalendar,
+			});
+
+			cell.textContent = formattedDate;
+
+			// Add tooltip with both calendar systems if enabled
+			if (this.props.settings.hijriCalendar.showBothInTooltips) {
+				const tooltip = createDateTooltip(
+					date,
+					this.props.settings.hijriCalendar
+				);
+				if (tooltip) {
+					cell.setAttribute("title", tooltip);
+					cell.addClass("library-date-with-tooltip");
+				}
+			}
+
+			// Add calendar type class for styling
+			const calendarType = this.props.settings.hijriCalendar
+				.useHijriCalendar
+				? "hijri"
+				: "gregorian";
+			cell.addClass(`library-date-${calendarType}`);
+		} catch (error) {
+			console.warn("Error formatting date:", dateString, error);
+			cell.textContent = "تاريخ غير صحيح";
+		}
 	}
 
 	private openEditBookModal(item: BookItem): void {

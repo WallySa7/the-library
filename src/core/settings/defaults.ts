@@ -6,6 +6,7 @@ import {
 	ProgressTrackingSettings,
 	FolderRulesSettings,
 	TemplateSettings,
+	HijriCalendarSettings,
 } from "./types";
 import { TableColumnConfig } from "../uiTypes";
 import {
@@ -17,6 +18,17 @@ import {
 	DEFAULT_BOOK_STATUS_OPTIONS,
 } from "../constants";
 import { BenefitShareOptions } from "../contentTypes";
+
+/**
+ * Default Hijri calendar settings
+ */
+export const DEFAULT_HIJRI_SETTINGS: HijriCalendarSettings = {
+	useHijriCalendar: false,
+	hijriFormat: "iYYYY/iMM/iDD",
+	gregorianFormat: "YYYY/MM/DD",
+	showCalendarType: true,
+	showBothInTooltips: true,
+};
 
 /**
  * Default table columns for videos
@@ -368,6 +380,7 @@ export const DEFAULT_SETTINGS: LibrarySettings = {
 	defaultPresenter: "غير معروف",
 	defaultAuthor: "غير معروف",
 	dateFormat: "YYYY-MM-DD",
+	hijriCalendar: DEFAULT_HIJRI_SETTINGS,
 	showVideosThumbnails: true,
 	showBooksThumbnails: true,
 	maxTitleLength: 100,

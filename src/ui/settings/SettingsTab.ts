@@ -4,6 +4,7 @@ import {
 	PLACEHOLDER_DOCS,
 } from "../../core/settings/placeholders";
 import LibraryPlugin from "../../../main";
+import { formatDate } from "src/utils";
 
 /**
  * Enhanced settings tab with tabbed interface and improved visual design
@@ -15,6 +16,7 @@ export class SettingsTab extends PluginSettingTab {
 	// Tab elements
 	private tabs: { id: string; name: string; icon: string }[] = [
 		{ id: "general", name: "عام", icon: "settings" },
+		{ id: "calendar", name: "التقويم", icon: "calendar" },
 		{ id: "content", name: "المحتوى", icon: "layers" },
 		{ id: "folders", name: "المجلدات", icon: "folder" },
 		{ id: "templates", name: "القوالب", icon: "file-text" },
@@ -50,6 +52,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		// Populate tab contents
 		this.populateGeneralTab();
+		this.populateCalendarTab();
 		this.populateContentTab();
 		this.populateFoldersTab();
 		this.populateTemplatesTab();
@@ -592,6 +595,206 @@ export class SettingsTab extends PluginSettingTab {
 			"info"
 		);
 	}
+
+	/**
+	 * Populates the Calendar tab with Hijri calendar settings
+	 */
+	private populateCalendarTab(): void {
+		const tabContent = this.tabContainers.get("calendar");
+		if (!tabContent) return;
+
+		this.createSectionHeader(tabContent, "إعدادات التقويم");
+
+		// Calendar system toggle
+		const calendarSystemSection = this.createCollapsibleSection(
+			tabContent,
+			"نظام التقويم"
+		);
+
+		new Setting(calendarSystemSection)
+			.setName("استخدام التقويم الهجري")
+			.setDesc("تفعيل التقويم الهجري كنظام افتراضي للتواريخ")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(
+						this.plugin.settings.hijriCalendar.useHijriCalendar
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.hijriCalendar.useHijriCalendar =
+							value;
+						await this.plugin.saveSettings();
+						this.updateDatePreviews();
+					})
+			);
+
+		// Show calendar type indicator
+		new Setting(calendarSystemSection)
+			.setName("عرض رمز نوع التقويم")
+			.setDesc("إضافة 'هـ' للتواريخ الهجرية و 'م' للتواريخ الميلادية")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(
+						this.plugin.settings.hijriCalendar.showCalendarType
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.hijriCalendar.showCalendarType =
+							value;
+						await this.plugin.saveSettings();
+						this.updateDatePreviews();
+					})
+			);
+
+		// Show both calendars in tooltips
+		new Setting(calendarSystemSection)
+			.setName("عرض التقويمين في التلميحات")
+			.setDesc("عرض التاريخ بالتقويم الآخر في التلميحات عند التمرير")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(
+						this.plugin.settings.hijriCalendar.showBothInTooltips
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.hijriCalendar.showBothInTooltips =
+							value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Date format settings
+		const formatSection = this.createCollapsibleSection(
+			tabContent,
+			"تنسيقات التاريخ"
+		);
+
+		// Create preview containers
+		const previewContainer = formatSection.createEl("div", {
+			cls: "library-date-preview-container",
+		});
+
+		const hijriPreview = previewContainer.createEl("div", {
+			cls: "library-date-preview hijri",
+		});
+		hijriPreview.createEl("span", {
+			text: "معاينة التقويم الهجري: ",
+			cls: "library-preview-label",
+		});
+		const hijriPreviewValue = hijriPreview.createEl("span", {
+			cls: "library-preview-value",
+		});
+
+		const gregorianPreview = previewContainer.createEl("div", {
+			cls: "library-date-preview gregorian",
+		});
+		gregorianPreview.createEl("span", {
+			text: "معاينة التقويم الميلادي: ",
+			cls: "library-preview-label",
+		});
+		const gregorianPreviewValue = gregorianPreview.createEl("span", {
+			cls: "library-preview-value",
+		});
+
+		// Update preview function
+		this.updateDatePreviews = () => {
+			const now = new Date();
+			const hijriFormatted = formatDate(now, {
+				useHijri: true,
+				hijriFormat: this.plugin.settings.hijriCalendar.hijriFormat,
+				showType: this.plugin.settings.hijriCalendar.showCalendarType,
+			});
+			const gregorianFormatted = formatDate(now, {
+				useHijri: false,
+				gregorianFormat:
+					this.plugin.settings.hijriCalendar.gregorianFormat,
+				showType: this.plugin.settings.hijriCalendar.showCalendarType,
+			});
+
+			hijriPreviewValue.textContent = hijriFormatted;
+			gregorianPreviewValue.textContent = gregorianFormatted;
+		};
+
+		// Hijri format setting
+		new Setting(formatSection)
+			.setName("تنسيق التاريخ الهجري")
+			.setDesc(
+				"تنسيق عرض التواريخ الهجرية (استخدم iYYYY للسنة، iMM للشهر، iDD لليوم)"
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("iYYYY/iMM/iDD")
+					.setValue(this.plugin.settings.hijriCalendar.hijriFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.hijriCalendar.hijriFormat =
+							value || "iYYYY/iMM/iDD";
+						await this.plugin.saveSettings();
+						this.updateDatePreviews();
+					})
+			);
+
+		// Gregorian format setting
+		new Setting(formatSection)
+			.setName("تنسيق التاريخ الميلادي")
+			.setDesc(
+				"تنسيق عرض التواريخ الميلادية (استخدم YYYY للسنة، MM للشهر، DD لليوم)"
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("YYYY/MM/DD")
+					.setValue(
+						this.plugin.settings.hijriCalendar.gregorianFormat
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.hijriCalendar.gregorianFormat =
+							value || "YYYY/MM/DD";
+						await this.plugin.saveSettings();
+						this.updateDatePreviews();
+					})
+			);
+
+		// Format help section
+		const helpSection = this.createCollapsibleSection(
+			formatSection,
+			"مساعدة تنسيق التاريخ"
+		);
+
+		const formatHelp = helpSection.createEl("div");
+		formatHelp.innerHTML = `
+			<div class="library-format-help">
+				<div class="library-format-section">
+					<h4>رموز التقويم الهجري:</h4>
+					<ul>
+						<li><code>iYYYY</code> - السنة (4 أرقام)</li>
+						<li><code>iYY</code> - السنة (رقمان)</li>
+						<li><code>iMM</code> - الشهر برقم مع صفر أمامي</li>
+						<li><code>iM</code> - الشهر برقم بدون صفر أمامي</li>
+						<li><code>iDD</code> - اليوم برقم مع صفر أمامي</li>
+						<li><code>iD</code> - اليوم برقم بدون صفر أمامي</li>
+						<li><code>iMMMM</code> - اسم الشهر كاملاً</li>
+						<li><code>iMMM</code> - اسم الشهر مختصراً</li>
+					</ul>
+				</div>
+				<div class="library-format-section">
+					<h4>رموز التقويم الميلادي:</h4>
+					<ul>
+						<li><code>YYYY</code> - السنة (4 أرقام)</li>
+						<li><code>YY</code> - السنة (رقمان)</li>
+						<li><code>MM</code> - الشهر برقم مع صفر أمامي</li>
+						<li><code>M</code> - الشهر برقم بدون صفر أمامي</li>
+						<li><code>DD</code> - اليوم برقم مع صفر أمامي</li>
+						<li><code>D</code> - اليوم برقم بدون صفر أمامي</li>
+						<li><code>MMMM</code> - اسم الشهر كاملاً</li>
+						<li><code>MMM</code> - اسم الشهر مختصراً</li>
+					</ul>
+				</div>
+			</div>
+		`;
+
+		// Initial updates
+		this.updateDatePreviews();
+		this.updateToggleButtons();
+	}
+
+	private updateDatePreviews: () => void = () => {};
+	private updateToggleButtons: () => void = () => {};
 
 	/**
 	 * Populates the Templates tab

@@ -6,7 +6,7 @@ import { ContentComponentProps } from "../../../core/";
 import { BookItem, LibraryItem } from "../../../core/contentTypes";
 import { TableColumnConfig } from "../../../core/uiTypes";
 import { ColumnConfigModal } from "../../modals/ColumnConfigModal";
-import { ItemUtils } from "../../../utils";
+import { createDateTooltip, formatDate, ItemUtils } from "../../../utils";
 
 /**
  * Props for BookTable component
@@ -321,18 +321,29 @@ export class BookTable {
 						break;
 
 					case "dateAdded":
-						row.createEl("td").textContent = item.dateAdded
-							? moment(item.dateAdded).format("YYYY-MM-DD")
-							: "غير معروف";
+						const dateAddedCell = row.createEl("td", {
+							cls: "library-date-cell",
+						});
+						this.renderDateCell(dateAddedCell, item.dateAdded);
 						break;
 
 					case "startDate":
-						row.createEl("td").textContent = item.startDate || "-";
+						// Enhanced date rendering with Hijri support
+						const startDateCell = row.createEl("td", {
+							cls: "library-date-cell",
+						});
+						this.renderDateCell(startDateCell, item.startDate);
 						break;
 
 					case "completionDate":
-						row.createEl("td").textContent =
-							item.completionDate || "-";
+						// Enhanced date rendering with Hijri support
+						const completionDateCell = row.createEl("td", {
+							cls: "library-date-cell",
+						});
+						this.renderDateCell(
+							completionDateCell,
+							item.completionDate
+						);
 						break;
 
 					case "rating":
@@ -583,6 +594,55 @@ export class BookTable {
 
 		const rect = element.getBoundingClientRect();
 		menu.showAtPosition({ x: rect.left, y: rect.bottom });
+	}
+
+	/**
+	 * Renders a date cell with Hijri calendar support and tooltips
+	 * @param cell The table cell element
+	 * @param dateString The date string to render
+	 */
+	private renderDateCell(cell: HTMLElement, dateString?: string): void {
+		if (!dateString) {
+			cell.textContent = "-";
+			return;
+		}
+
+		try {
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) {
+				cell.textContent = "تاريخ غير صحيح";
+				return;
+			}
+
+			// Format the date using the current calendar system
+			const formattedDate = formatDate(date, {
+				settings: this.props.settings.hijriCalendar,
+			});
+
+			cell.textContent = formattedDate;
+
+			// Add tooltip with both calendar systems if enabled
+			if (this.props.settings.hijriCalendar.showBothInTooltips) {
+				const tooltip = createDateTooltip(
+					date,
+					this.props.settings.hijriCalendar
+				);
+				if (tooltip) {
+					cell.setAttribute("title", tooltip);
+					cell.addClass("library-date-with-tooltip");
+				}
+			}
+
+			// Add calendar type class for styling
+			const calendarType = this.props.settings.hijriCalendar
+				.useHijriCalendar
+				? "hijri"
+				: "gregorian";
+			cell.addClass(`library-date-${calendarType}`);
+		} catch (error) {
+			console.warn("Error formatting date:", dateString, error);
+			cell.textContent = "تاريخ غير صحيح";
+		}
 	}
 
 	/**
