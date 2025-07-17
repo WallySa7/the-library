@@ -1,11 +1,13 @@
 /**
  * Advanced Analytics Dashboard for book content
- * With collapsible sections and comprehensive visualizations
+ * With collapsible sections, comprehensive visualizations, and Hijri/Gregorian calendar support
  */
-import { moment, setIcon, TFile } from "obsidian";
+import { setIcon, TFile } from "obsidian";
 import { ContentComponentProps } from "../../../core/uiTypes";
 import { BookItem, LibraryItem } from "../../../core/contentTypes";
+import { formatDate, createDateTooltip } from "../../../utils/dateUtils";
 import { BOOK_STATUS } from "../../../core/constants";
+import moment from "moment-hijri";
 
 // Storage keys for dashboard state
 const BOOK_DASHBOARD_COLLAPSED_KEY = "library-book-dashboard-collapsed";
@@ -99,6 +101,12 @@ interface TimeAnalysis {
 
 	/** Total pages added in this period */
 	pageCount: number;
+
+	/** Display period in selected calendar */
+	displayPeriod: string;
+
+	/** Raw date for sorting */
+	sortDate: Date;
 }
 
 /**
@@ -123,7 +131,7 @@ interface AuthorStats {
 
 /**
  * Advanced dashboard for book analytics
- * with collapsible sections
+ * with collapsible sections and calendar support
  */
 export class BookAnalyticsDashboard {
 	private props: BookAnalyticsDashboardProps;
@@ -248,9 +256,35 @@ export class BookAnalyticsDashboard {
 			text: `إجمالي الكتب: ${this.props.items.length} كتاب`,
 		});
 
-		subtitle.createEl("span", {
-			text: `تم التحديث: ${moment().format("YYYY-MM-DD HH:mm")}`,
+		// Use enhanced date formatting for last updated
+		const lastUpdatedSpan = subtitle.createEl("span", {
+			cls: "library-dashboard-last-updated",
 		});
+
+		const now = new Date();
+		const formattedDateTime = formatDate(now, {
+			settings: this.props.settings.hijriCalendar,
+		});
+
+		// Add time to the formatted date
+		const timeStr = moment(now).format("LT");
+		lastUpdatedSpan.textContent = `تم التحديث: ${formattedDateTime} ${timeStr}`;
+
+		// Add tooltip with both calendar systems if enabled
+		if (this.props.settings.hijriCalendar.showBothInTooltips) {
+			const tooltip = createDateTooltip(
+				now,
+				this.props.settings.hijriCalendar
+			);
+			if (tooltip) {
+				const tooltipWithTime = tooltip
+					.split("\n")
+					.map((line) => line + ` ${timeStr}`)
+					.join("\n");
+				lastUpdatedSpan.setAttribute("title", tooltipWithTime);
+				lastUpdatedSpan.addClass("library-date-with-tooltip");
+			}
+		}
 	}
 
 	/**
@@ -525,7 +559,7 @@ export class BookAnalyticsDashboard {
 	}
 
 	/**
-	 * Renders the time analysis section
+	 * Renders the time analysis section with calendar support
 	 * @param container Parent container
 	 */
 	private renderTimeAnalysis(container: HTMLElement): void {
@@ -593,7 +627,7 @@ export class BookAnalyticsDashboard {
 
 			// Limit to last 12 months for better visualization
 			const lastMonths = this.timeAnalysis
-				.sort((a, b) => b.period.localeCompare(a.period))
+				.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
 				.slice(0, 12)
 				.reverse();
 
@@ -614,19 +648,30 @@ export class BookAnalyticsDashboard {
 					cls: "library-time-bar-label",
 				});
 
-				// Format the month label in Arabic
-				const [year, month] = period.period.split("-");
-				const monthName = this.getArabicMonthName(parseInt(month));
-
+				// Use the formatted display period in the selected calendar
 				label.createEl("span", {
-					text: `${monthName} ${year}`,
+					text: period.displayPeriod,
 					cls: "library-time-period",
 				});
 
-				bar.setAttribute(
-					"title",
-					`${period.count} كتاب - ${period.pageCount} صفحة`
-				);
+				// Add tooltip with additional calendar info if enabled
+				const tooltipText = `${period.count} كتاب - ${period.pageCount} صفحة`;
+				if (this.props.settings.hijriCalendar.showBothInTooltips) {
+					const dateTooltip = createDateTooltip(
+						period.sortDate,
+						this.props.settings.hijriCalendar
+					);
+					if (dateTooltip) {
+						bar.setAttribute(
+							"title",
+							`${tooltipText}\n${dateTooltip}`
+						);
+					} else {
+						bar.setAttribute("title", tooltipText);
+					}
+				} else {
+					bar.setAttribute("title", tooltipText);
+				}
 			});
 
 			// Add y-axis labels
@@ -1207,27 +1252,50 @@ export class BookAnalyticsDashboard {
 	}
 
 	/**
-	 * Gets Arabic month name from month number
-	 * @param month Month number (1-12)
-	 * @returns Arabic month name
+	 * Gets month name in the selected calendar system
+	 * @param date Date to get month name for
+	 * @returns Month name in the selected calendar
 	 */
-	private getArabicMonthName(month: number): string {
-		const arabicMonths = [
-			"يناير",
-			"فبراير",
-			"مارس",
-			"أبريل",
-			"مايو",
-			"يونيو",
-			"يوليو",
-			"أغسطس",
-			"سبتمبر",
-			"أكتوبر",
-			"نوفمبر",
-			"ديسمبر",
-		];
+	private getMonthName(date: Date): string {
+		if (this.props.settings.hijriCalendar.useHijriCalendar) {
+			// Hijri month names
+			const hijriMonths = [
+				"محرم",
+				"صفر",
+				"ربيع الأول",
+				"ربيع الثاني",
+				"جمادى الأولى",
+				"جمادى الثانية",
+				"رجب",
+				"شعبان",
+				"رمضان",
+				"شوال",
+				"ذو القعدة",
+				"ذو الحجة",
+			];
 
-		return arabicMonths[month - 1] || "";
+			const hijriMoment = moment(date);
+			const hijriMonth = parseInt(hijriMoment.format("iM")) - 1;
+			return hijriMonths[hijriMonth] || "";
+		} else {
+			// Gregorian month names
+			const gregorianMonths = [
+				"يناير",
+				"فبراير",
+				"مارس",
+				"أبريل",
+				"مايو",
+				"يونيو",
+				"يوليو",
+				"أغسطس",
+				"سبتمبر",
+				"أكتوبر",
+				"نوفمبر",
+				"ديسمبر",
+			];
+
+			return gregorianMonths[date.getMonth()] || "";
+		}
 	}
 
 	/**
@@ -1411,7 +1479,7 @@ export class BookAnalyticsDashboard {
 	}
 
 	/**
-	 * Calculates time-based analysis
+	 * Calculates time-based analysis with calendar support
 	 * @returns Array of time analysis data by month
 	 */
 	private calculateTimeAnalysis(): TimeAnalysis[] {
@@ -1420,6 +1488,7 @@ export class BookAnalyticsDashboard {
 			{
 				count: number;
 				pageCount: number;
+				date: Date;
 			}
 		>();
 
@@ -1428,21 +1497,24 @@ export class BookAnalyticsDashboard {
 			if (!item.dateAdded) return;
 
 			try {
-				const date = moment(item.dateAdded);
-				const period = date.format("YYYY-MM"); // Group by month
+				const date = new Date(item.dateAdded);
+				const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1)
+					.toString()
+					.padStart(2, "0")}`;
 
 				const bookItem = item as BookItem;
 				const pageCount = bookItem.pageCount || 0;
 
 				// Update time map
-				if (timeMap.has(period)) {
-					const existing = timeMap.get(period)!;
+				if (timeMap.has(yearMonth)) {
+					const existing = timeMap.get(yearMonth)!;
 					existing.count++;
 					existing.pageCount += pageCount;
 				} else {
-					timeMap.set(period, {
+					timeMap.set(yearMonth, {
 						count: 1,
 						pageCount: pageCount,
+						date: new Date(date.getFullYear(), date.getMonth(), 1),
 					});
 				}
 			} catch (error) {
@@ -1450,19 +1522,31 @@ export class BookAnalyticsDashboard {
 			}
 		});
 
-		// Convert map to array
+		// Convert map to array with calendar-aware formatting
 		const result: TimeAnalysis[] = [];
 
 		timeMap.forEach((data, period) => {
+			// Format the period display name using the selected calendar
+			const monthName = this.getMonthName(data.date);
+			const year = this.props.settings.hijriCalendar.useHijriCalendar
+				? moment(data.date).format("iYYYY")
+				: data.date.getFullYear().toString();
+
+			const displayPeriod = `${monthName} ${year}`;
+
 			result.push({
 				period,
 				count: data.count,
 				pageCount: data.pageCount,
+				displayPeriod,
+				sortDate: data.date,
 			});
 		});
 
 		// Sort by period (ascending)
-		return result.sort((a, b) => a.period.localeCompare(b.period));
+		return result.sort(
+			(a, b) => a.sortDate.getTime() - b.sortDate.getTime()
+		);
 	}
 
 	/**
