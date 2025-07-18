@@ -45,6 +45,50 @@ export class YouTubeService {
 	}
 
 	/**
+	 * Cleans up YouTube title by removing starting and ending quotes
+	 * @param title - Raw title from YouTube
+	 * @returns Cleaned title without surrounding quotes
+	 */
+	private cleanYouTubeTitle(title: string): string {
+		if (!title || typeof title !== "string") {
+			return "";
+		}
+
+		// Remove leading and trailing whitespace first
+		let cleaned = title.trim();
+
+		// Remove matching quotes from start and end
+		// Handle both single and double quotes
+		if (
+			(cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+			(cleaned.startsWith("'") && cleaned.endsWith("'")) ||
+			(cleaned.startsWith("«") && cleaned.endsWith("»")) ||
+			(cleaned.startsWith("„") && cleaned.endsWith('"')) ||
+			(cleaned.startsWith('"') && cleaned.endsWith('"'))
+		) {
+			cleaned = cleaned.slice(1, -1).trim();
+		}
+
+		// Handle cases where there might be multiple nested quotes
+		// Keep removing outer quotes until no more matching pairs
+		let previousLength;
+		do {
+			previousLength = cleaned.length;
+			if (
+				(cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+				(cleaned.startsWith("'") && cleaned.endsWith("'")) ||
+				(cleaned.startsWith("«") && cleaned.endsWith("»")) ||
+				(cleaned.startsWith("„") && cleaned.endsWith('"')) ||
+				(cleaned.startsWith('"') && cleaned.endsWith('"'))
+			) {
+				cleaned = cleaned.slice(1, -1).trim();
+			}
+		} while (cleaned.length < previousLength && cleaned.length > 0);
+
+		return cleaned;
+	}
+
+	/**
 	 * Gets video details from YouTube
 	 * @param videoId - YouTube video ID
 	 * @returns Response containing video details or error
@@ -87,7 +131,7 @@ export class YouTubeService {
 			// Extract video details
 			const item = data.items[0];
 			const details: VideoDetails = {
-				title: item.snippet.title,
+				title: this.cleanYouTubeTitle(item.snippet.title),
 				duration: parseYouTubeDuration(item.contentDetails.duration),
 				thumbnailUrl: this.getBestThumbnail(item.snippet.thumbnails),
 				description: item.snippet.description || "",
@@ -186,7 +230,7 @@ export class YouTubeService {
 
 			// Create playlist details
 			const details: PlaylistDetails = {
-				title: item.snippet.title,
+				title: this.cleanYouTubeTitle(item.snippet.title),
 				itemCount: item.contentDetails.itemCount || 0,
 				duration,
 				thumbnailUrl,
@@ -251,7 +295,7 @@ export class YouTubeService {
 
 			// Map items to a simpler format
 			const videos = data.items.map((item: any) => ({
-				title: item.snippet.title,
+				title: this.cleanYouTubeTitle(item.snippet.title),
 				videoId: item.contentDetails.videoId,
 				thumbnailUrl: this.getBestThumbnail(item.snippet.thumbnails),
 				position: item.snippet.position,
@@ -558,7 +602,7 @@ export class YouTubeService {
 
 				// Create basic video details
 				const details: VideoDetails = {
-					title: oembedData.title,
+					title: this.cleanYouTubeTitle(oembedData.title),
 					duration: "00:00:00", // Unknown without API key
 					thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
 					description: "",
@@ -595,14 +639,14 @@ export class YouTubeService {
 
 				// Extract title from HTML
 				const titleMatch = html.match(/<title>(.*?)<\/title>/);
-				const title = titleMatch
+				const rawTitle = titleMatch
 					? titleMatch[1].replace(" - YouTube", "").trim()
 					: "قائمة تشغيل غير معروفة";
 
 				return {
 					success: true,
 					data: {
-						title,
+						title: this.cleanYouTubeTitle(rawTitle),
 						itemCount: 0, // Unknown without API
 						duration: "00:00:00", // Unknown without API
 						thumbnailUrl: `https://img.youtube.com/vi/placeholder/hqdefault.jpg`,
