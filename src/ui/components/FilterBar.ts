@@ -1,10 +1,17 @@
 /**
- * Filter bar component for content filtering
+ * Filter bar component for content filtering with Unified Custom Date Picker
  */
 import { SearchComponent } from "obsidian";
 import { ContentComponentProps } from "../../core/uiTypes";
 import { FilterState, FilterStateEvents } from "../../core/state/FilterState";
 import { CONTENT_TYPE } from "src/core/constants";
+import {
+	formatDate,
+	parseDate,
+	getCurrentDateString,
+} from "../../utils/dateUtils";
+import { CustomDatePicker, CalendarType } from "./CustomDatePicker";
+import moment from "moment-hijri";
 
 /**
  * Props for FilterBar component
@@ -45,6 +52,10 @@ export class FilterBar {
 	private dropdowns: Map<string, HTMLElement> = new Map();
 	private optionsContainers: Map<string, HTMLElement> = new Map();
 	private selectedFiltersContainer: HTMLElement | null = null;
+
+	// Date picker references
+	private fromDatePicker: CustomDatePicker | null = null;
+	private toDatePicker: CustomDatePicker | null = null;
 
 	// State unsubscribe functions
 	private stateUnsubscribes: (() => void)[] = [];
@@ -170,19 +181,27 @@ export class FilterBar {
 		// Search bar
 		this.renderSearchBar(filterBar);
 	}
+
 	/**
-	 * Renders the date range filter
+	 * Renders the date range filter with custom date pickers
 	 * @param container Filter bar container
 	 */
 	private renderDateRangeFilter(container: HTMLElement): void {
 		const filterState = this.props.filterState.getState();
+		const hijriSettings = this.props.settings.hijriCalendar;
+		const useHijri = hijriSettings.useHijriCalendar;
 
 		const dateFilter = container.createEl("div", {
 			cls: "library-filter-group",
 		});
 
+		// Create label with calendar type indicator
+		const labelText = useHijri
+			? `تاريخ الإضافة ${hijriSettings.showCalendarType ? "(هـ)" : ""}`
+			: `تاريخ الإضافة ${hijriSettings.showCalendarType ? "(م)" : ""}`;
+
 		dateFilter.createEl("label", {
-			text: "تاريخ الإضافة",
+			text: labelText,
 			cls: "library-filter-label",
 		});
 
@@ -190,37 +209,195 @@ export class FilterBar {
 			cls: "library-date-range",
 		});
 
-		// From date input
-		const fromInput = dateContainer.createEl("input", {
-			type: "date",
-			cls: "library-date-input",
-			value: filterState.dateRange.from || "",
+		// Always use custom date pickers
+		this.createCustomDatePickers(dateContainer, filterState, useHijri);
+	}
+
+	/**
+	 * Creates custom date pickers for both calendar types
+	 * @param container Date container element
+	 * @param filterState Current filter state
+	 * @param useHijri Whether to use Hijri calendar
+	 */
+	private createCustomDatePickers(
+		container: HTMLElement,
+		filterState: any,
+		useHijri: boolean
+	): void {
+		const hijriSettings = this.props.settings.hijriCalendar;
+		const calendarType: CalendarType = useHijri ? "hijri" : "gregorian";
+		const format = useHijri
+			? hijriSettings.hijriFormat
+			: hijriSettings.gregorianFormat;
+
+		// From date picker
+		const fromContainer = container.createEl("div", {
+			cls: "library-date-container",
 		});
 
-		fromInput.addEventListener("change", () => {
-			this.props.filterState.updateState({
-				dateRange: { ...filterState.dateRange, from: fromInput.value },
-				page: 1,
-			});
-			this.props.onFilterChange();
+		fromContainer.createEl("label", {
+			text: "من:",
+			cls: "library-date-label",
 		});
 
-		dateContainer.createEl("span", { text: "إلى" });
-
-		// To date input
-		const toInput = dateContainer.createEl("input", {
-			type: "date",
-			cls: "library-date-input",
-			value: filterState.dateRange.to || "",
+		const fromPickerContainer = fromContainer.createEl("div", {
+			cls: "library-date-picker-wrapper",
 		});
 
-		toInput.addEventListener("change", () => {
-			this.props.filterState.updateState({
-				dateRange: { ...filterState.dateRange, to: toInput.value },
-				page: 1,
-			});
-			this.props.onFilterChange();
+		// Convert initial value if needed
+		let initialFromValue = "";
+		if (filterState.dateRange.from) {
+			if (useHijri) {
+				initialFromValue = this.convertGregorianToHijri(
+					filterState.dateRange.from
+				);
+			} else {
+				initialFromValue = filterState.dateRange.from;
+			}
+		}
+
+		this.fromDatePicker = new CustomDatePicker(fromPickerContainer, {
+			calendarType: calendarType,
+			value: initialFromValue,
+			format: format,
+			placeholder: `اختر تاريخ البداية ${useHijri ? "(هـ)" : "(م)"}`,
+			onChange: (date: string) => {
+				this.handleDateChange("from", date, useHijri);
+			},
+			className: "library-filter-date-input",
 		});
+
+		// To date picker
+		const toContainer = container.createEl("div", {
+			cls: "library-date-container",
+		});
+
+		toContainer.createEl("label", {
+			text: "إلى:",
+			cls: "library-date-label",
+		});
+
+		const toPickerContainer = toContainer.createEl("div", {
+			cls: "library-date-picker-wrapper",
+		});
+
+		// Convert initial value if needed
+		let initialToValue = "";
+		if (filterState.dateRange.to) {
+			if (useHijri) {
+				initialToValue = this.convertGregorianToHijri(
+					filterState.dateRange.to
+				);
+			} else {
+				initialToValue = filterState.dateRange.to;
+			}
+		}
+
+		this.toDatePicker = new CustomDatePicker(toPickerContainer, {
+			calendarType: calendarType,
+			value: initialToValue,
+			format: format,
+			placeholder: `اختر تاريخ النهاية ${useHijri ? "(هـ)" : "(م)"}`,
+			onChange: (date: string) => {
+				this.handleDateChange("to", date, useHijri);
+			},
+			className: "library-filter-date-input",
+		});
+
+		// Add tooltip with both calendars if enabled
+		if (hijriSettings.showBothInTooltips) {
+			this.addDateTooltips();
+		}
+	}
+
+	/**
+	 * Handles date changes from custom date pickers
+	 * @param type Whether it's "from" or "to" date
+	 * @param dateValue Date value from picker
+	 * @param isHijri Whether the date is in Hijri calendar
+	 */
+	private handleDateChange(
+		type: "from" | "to",
+		dateValue: string,
+		isHijri: boolean
+	): void {
+		const filterState = this.props.filterState.getState();
+
+		// Convert to Gregorian for internal storage if needed
+		let gregorianValue = "";
+		if (dateValue) {
+			if (isHijri) {
+				try {
+					gregorianValue = this.convertHijriToGregorian(dateValue);
+				} catch (error) {
+					console.warn("Invalid Hijri date:", dateValue);
+					return;
+				}
+			} else {
+				gregorianValue = dateValue;
+			}
+		}
+
+		// Update filter state
+		const newDateRange = { ...filterState.dateRange };
+		newDateRange[type] = gregorianValue;
+
+		this.props.filterState.updateState({
+			dateRange: newDateRange,
+			page: 1,
+		});
+		this.props.onFilterChange();
+	}
+
+	/**
+	 * Converts Gregorian date string to Hijri
+	 * @param gregorianDate Gregorian date in YYYY-MM-DD format
+	 * @returns Hijri date string
+	 */
+	private convertGregorianToHijri(gregorianDate: string): string {
+		if (!gregorianDate) return "";
+
+		try {
+			const date = moment(gregorianDate, "YYYY-MM-DD");
+			return date.format(this.props.settings.hijriCalendar.hijriFormat);
+		} catch (error) {
+			console.warn("Error converting Gregorian to Hijri:", error);
+			return "";
+		}
+	}
+
+	/**
+	 * Converts Hijri date string to Gregorian
+	 * @param hijriDate Hijri date string
+	 * @returns Gregorian date in YYYY-MM-DD format
+	 */
+	private convertHijriToGregorian(hijriDate: string): string {
+		if (!hijriDate) return "";
+
+		try {
+			const date = moment(
+				hijriDate,
+				this.props.settings.hijriCalendar.hijriFormat
+			);
+			if (!date.isValid()) {
+				throw new Error("Invalid Hijri date");
+			}
+			return date.format("YYYY-MM-DD");
+		} catch (error) {
+			console.warn("Error converting Hijri to Gregorian:", error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Adds tooltips showing both calendar systems for date pickers
+	 */
+	private addDateTooltips(): void {
+		if (!this.fromDatePicker || !this.toDatePicker) return;
+
+		// Note: Tooltip implementation would need to be integrated into the CustomDatePicker class
+		// This is a placeholder for the tooltip functionality
+		// In practice, you would extend the CustomDatePicker to support tooltips internally
 	}
 
 	/**
@@ -726,8 +903,9 @@ export class FilterBar {
 			// Update the selected filters display
 			this.renderSelectedFilters(this.container);
 
-			// Update dropdown displays to match the current state
+			// Update date inputs/pickers to reflect current state
 			const filterState = this.props.filterState.getState();
+			this.updateDateInputs(filterState);
 
 			// Update each dropdown display and its checkboxes
 			this.dropdowns.forEach((dropdown, type) => {
@@ -766,6 +944,36 @@ export class FilterBar {
 				}
 			});
 		}
+	}
+
+	/**
+	 * Updates date pickers when filter state changes
+	 * @param filterState Current filter state
+	 */
+	private updateDateInputs(filterState: any): void {
+		if (!this.fromDatePicker || !this.toDatePicker) return;
+
+		const hijriSettings = this.props.settings.hijriCalendar;
+		const useHijri = hijriSettings.useHijriCalendar;
+
+		// Convert and update values based on current calendar type
+		let fromValue = "";
+		let toValue = "";
+
+		if (filterState.dateRange.from) {
+			fromValue = useHijri
+				? this.convertGregorianToHijri(filterState.dateRange.from)
+				: filterState.dateRange.from;
+		}
+
+		if (filterState.dateRange.to) {
+			toValue = useHijri
+				? this.convertGregorianToHijri(filterState.dateRange.to)
+				: filterState.dateRange.to;
+		}
+
+		this.fromDatePicker.setValue(fromValue);
+		this.toDatePicker.setValue(toValue);
 	}
 
 	/**
@@ -895,11 +1103,27 @@ export class FilterBar {
 			});
 		});
 
-		// Date range filter
+		// Date range filter - Display dates in the user's preferred calendar
 		if (filterState.dateRange.from || filterState.dateRange.to) {
-			const dateText = `${filterState.dateRange.from || "البداية"} إلى ${
-				filterState.dateRange.to || "النهاية"
-			}`;
+			const hijriSettings = this.props.settings.hijriCalendar;
+			const useHijri = hijriSettings.useHijriCalendar;
+
+			let fromText = "البداية";
+			let toText = "النهاية";
+
+			if (filterState.dateRange.from) {
+				fromText = useHijri
+					? this.convertGregorianToHijri(filterState.dateRange.from)
+					: filterState.dateRange.from;
+			}
+
+			if (filterState.dateRange.to) {
+				toText = useHijri
+					? this.convertGregorianToHijri(filterState.dateRange.to)
+					: filterState.dateRange.to;
+			}
+
+			const dateText = `${fromText} إلى ${toText}`;
 			this.createFilterBadge(filtersList, "التاريخ", dateText, () => {
 				this.props.filterState.updateState({
 					dateRange: { from: null, to: null },
@@ -947,6 +1171,10 @@ export class FilterBar {
 				if (this.searchInput) {
 					this.searchInput.setValue("");
 				}
+
+				// Clear date pickers
+				if (this.fromDatePicker) this.fromDatePicker.setValue("");
+				if (this.toDatePicker) this.toDatePicker.setValue("");
 
 				// Update dropdown displays
 				this.dropdowns.forEach((dropdown, type) => {
@@ -1239,6 +1467,16 @@ export class FilterBar {
 		// Unsubscribe from state events
 		this.stateUnsubscribes.forEach((unsubscribe) => unsubscribe());
 		this.stateUnsubscribes = [];
+
+		// Destroy date pickers
+		if (this.fromDatePicker) {
+			this.fromDatePicker.destroy();
+			this.fromDatePicker = null;
+		}
+		if (this.toDatePicker) {
+			this.toDatePicker.destroy();
+			this.toDatePicker = null;
+		}
 
 		// Clear collections
 		this.dropdowns.clear();
