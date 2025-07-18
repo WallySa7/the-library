@@ -448,55 +448,69 @@ export class VideoModal extends BaseModal {
 	 * @param form Form container
 	 */
 	private renderPlaylistSpecificFields(form: HTMLElement): void {
-		// Checkbox for adding video titles as headers (playlist only)
-		const playlistOptionsContainer = this.createFormField(
-			form,
-			"خيارات السلسلة",
-			() => {
-				const container = form.createEl("div", {
-					cls: "library-playlist-options",
-				});
+		// Only show playlist options (including video titles checkbox) when not in edit mode
+		if (!this.isEditMode) {
+			// Checkbox for adding video titles as headers (playlist only)
+			const playlistOptionsContainer = this.createFormField(
+				form,
+				"خيارات السلسلة",
+				() => {
+					const container = form.createEl("div", {
+						cls: "library-playlist-options",
+					});
 
-				const checkboxContainer = container.createEl("div", {
-					cls: "library-checkbox-container",
-				});
+					const checkboxContainer = container.createEl("div", {
+						cls: "library-checkbox-container",
+					});
 
-				this.addVideoTitlesCheckbox = checkboxContainer.createEl(
-					"input",
-					{
-						type: "checkbox",
-						cls: "library-checkbox",
-					}
-				);
+					this.addVideoTitlesCheckbox = checkboxContainer.createEl(
+						"input",
+						{
+							type: "checkbox",
+							cls: "library-checkbox",
+						}
+					);
 
-				const label = checkboxContainer.createEl("label", {
-					text: "إضافة عناوين المقاطع كرؤوس",
-					cls: "library-checkbox-label",
-				});
+					const label = checkboxContainer.createEl("label", {
+						text: "إضافة عناوين المقاطع كرؤوس",
+						cls: "library-checkbox-label",
+					});
 
-				label.addEventListener("click", () => {
-					this.addVideoTitlesCheckbox.checked =
-						!this.addVideoTitlesCheckbox.checked;
-					this.toggleVideoTitlesPreview();
-				});
+					label.addEventListener("click", () => {
+						this.addVideoTitlesCheckbox.checked =
+							!this.addVideoTitlesCheckbox.checked;
+						this.toggleVideoTitlesPreview();
+					});
 
-				this.addVideoTitlesCheckbox.addEventListener("change", () => {
-					this.toggleVideoTitlesPreview();
-				});
+					this.addVideoTitlesCheckbox.addEventListener(
+						"change",
+						() => {
+							this.toggleVideoTitlesPreview();
+						}
+					);
 
-				return container;
-			}
-		);
+					return container;
+				}
+			);
 
-		// Container for video titles preview
-		this.playlistVideoTitlesContainer = form.createEl("div", {
-			cls: "library-playlist-videos-preview",
-		});
-		this.playlistVideoTitlesContainer.style.display = "none";
+			// Container for video titles preview
+			this.playlistVideoTitlesContainer = form.createEl("div", {
+				cls: "library-playlist-videos-preview",
+			});
+			this.playlistVideoTitlesContainer.style.display = "none";
 
-		// Initially hide playlist options
-		playlistOptionsContainer.style.display = "none";
-		(playlistOptionsContainer as any).isPlaylistField = true;
+			// Initially hide playlist options
+			playlistOptionsContainer.style.display = "none";
+			(playlistOptionsContainer as any).isPlaylistField = true;
+		} else {
+			// In edit mode, create empty containers to avoid null reference errors
+			this.addVideoTitlesCheckbox = document.createElement("input");
+			this.addVideoTitlesCheckbox.type = "checkbox";
+			this.addVideoTitlesCheckbox.checked = false; // Always false in edit mode
+
+			this.playlistVideoTitlesContainer = document.createElement("div");
+			this.playlistVideoTitlesContainer.style.display = "none";
+		}
 	}
 
 	/**
@@ -505,20 +519,23 @@ export class VideoModal extends BaseModal {
 	private togglePlaylistFields(): void {
 		const isPlaylist = this.typeInput.getValue() === "سلسلة";
 
-		// Find all playlist-specific fields
-		const playlistFields =
-			this.contentEl.querySelectorAll(".library-field");
-		playlistFields.forEach((field) => {
-			if ((field as any).isPlaylistField) {
-				(field as HTMLElement).style.display = isPlaylist
-					? "block"
-					: "none";
-			}
-		});
+		// Only handle playlist field visibility if not in edit mode
+		if (!this.isEditMode) {
+			// Find all playlist-specific fields
+			const playlistFields =
+				this.contentEl.querySelectorAll(".library-field");
+			playlistFields.forEach((field) => {
+				if ((field as any).isPlaylistField) {
+					(field as HTMLElement).style.display = isPlaylist
+						? "block"
+						: "none";
+				}
+			});
 
-		// Also hide the video titles container if not playlist
-		if (!isPlaylist) {
-			this.playlistVideoTitlesContainer.style.display = "none";
+			// Also hide the video titles container if not playlist
+			if (!isPlaylist && this.playlistVideoTitlesContainer) {
+				this.playlistVideoTitlesContainer.style.display = "none";
+			}
 		}
 	}
 
@@ -526,6 +543,11 @@ export class VideoModal extends BaseModal {
 	 * Toggles video titles preview based on checkbox state
 	 */
 	private toggleVideoTitlesPreview(): void {
+		// Skip if in edit mode since checkbox is not available
+		if (this.isEditMode) {
+			return;
+		}
+
 		const isChecked = this.addVideoTitlesCheckbox.checked;
 
 		if (isChecked) {
@@ -540,6 +562,11 @@ export class VideoModal extends BaseModal {
 	 * Loads and displays video titles preview
 	 */
 	private async loadVideoTitlesPreview(): Promise<void> {
+		// Skip if in edit mode since this feature is not available
+		if (this.isEditMode) {
+			return;
+		}
+
 		const url = this.urlInput.getValue().trim();
 		if (!url) return;
 
@@ -1240,9 +1267,9 @@ export class VideoModal extends BaseModal {
 				startDate = today;
 			}
 
-			// Check if user wants to add video titles
+			// Check if user wants to add video titles (only in creation mode)
 			let videoTitlesContent = "";
-			if (this.addVideoTitlesCheckbox.checked) {
+			if (!this.isEditMode && this.addVideoTitlesCheckbox.checked) {
 				this.loadingMessage = "جاري جلب عناوين المقاطع...";
 				this.updateLoadingUI();
 
@@ -1291,6 +1318,11 @@ export class VideoModal extends BaseModal {
 	 * @returns Formatted content with video titles as headers
 	 */
 	private async getVideoTitlesContent(playlistId: string): Promise<string> {
+		// Skip if in edit mode since checkbox is not available
+		if (this.isEditMode) {
+			return "";
+		}
+
 		try {
 			const response = await this.plugin.youtubeService.getPlaylistVideos(
 				playlistId,
